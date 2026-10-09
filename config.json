@@ -45,7 +45,7 @@
       "figi": "BBG004730RP0",
       "ticker": "GAZP",
       "account_id": "03ec52bc-6f1b-4ab9-b3f7-3a4e96cde02a",
-      "strategy": "sma",
+      "strategy": "macd",
       "params": {
         "fast": 10,
         "slow": 50,
@@ -63,7 +63,10 @@
         "use_limit": true,
         "limit_offset": 0.002,
         "velocity_limit": 0.03,
-        "velocity_window_sec": 300
+        "velocity_window_sec": 300,
+        "macd_fast": 12,
+        "macd_slow": 26,
+        "macd_signal": 9
       }
     },
     {
