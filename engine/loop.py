@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone, timedelta
 from broker import portfolio as pf
 from broker import orders as od
+from broker import preflight as _pfl
 from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
@@ -533,6 +534,18 @@ class RobotLoop:
                 log.warning("[robot-%s] unknown instrument type: %s", self.rid, _it)
         except Exception as _e:
             log.warning("[robot-%s] instrument check: %s", self.rid, str(_e)[:120])
+        if self.mode == "real":
+            _use_lim = bool(self.params.get("use_limit", False))
+            _ok, _msg = await _pfl.check_real(self.c, self.figi, self.ticker, _use_lim)
+            log.info("[robot-%s] preflight: %s", self.rid, _msg)
+            if not _ok:
+                log.error("[robot-%s] preflight FAILED, stopping robot", self.rid)
+                try:
+                    _nt.notify_error(self.rid, "preflight: " + _msg)
+                except Exception:
+                    pass
+                self._stop = True
+                return
         try:
             _q, _a, _c = await self.get_position()
             if _q > 0 and _a > 0:
