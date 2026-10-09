@@ -2,10 +2,12 @@
 from __future__ import annotations
 import json
 import pathlib
+import sqlite3
 import time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOG = ROOT / "logs" / "robot.log"
 STATE = ROOT / "logs" / ".pilot_state.json"
+DB = ROOT / "data" / "robot.db"
 CHECK_SEC = 60
 SILENT_SEC = 180
 STUCK_MIN = 10
@@ -82,6 +84,25 @@ def _check_price(state, lines):
             state["stuck_" + rid] = 0
         _last_px[rid] = px
 
+def _check_trade_errors(state):
+    try:
+        if not DB.exists():
+            return
+        c = sqlite3.connect(str(DB))
+        pct = chr(37)
+        q = "SELECT id, robot_id, ticker, status FROM trades WHERE status LIKE ? OR status LIKE ? ORDER BY id DESC LIMIT 50"
+        rows = c.execute(q, (pct+"ERROR"+pct, pct+"REJECTED"+pct)).fetchall()
+        c.close()
+    except Exception:
+        return
+    seen = state.get("tr_err_seen", 0)
+    mx = max([r[0] for r in rows], default=0)
+    if mx > seen:
+        for r in rows:
+            if r[0] > seen:
+                _notify("trade error", "R" + str(r[1]) + " " + str(r[2]) + " " + str(r[3]))
+        state["tr_err_seen"] = mx
+
 def main():
     print("[pilot] start " + str(ROOT), flush=True)
     state = _load()
@@ -90,6 +111,7 @@ def main():
             lines = _last(50)
             _check_silent(state)
             _check_price(state, lines)
+            _check_trade_errors(state)
             _save(state)
             print("[pilot] ok age=" + str(int(_age())) + "s", flush=True)
         except Exception as e:
