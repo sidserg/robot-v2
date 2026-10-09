@@ -59,6 +59,9 @@ class RobotLoop:
         self._reconcile_every = int(params.get("reconcile_every", 20))
         self.lot = 1
         self._stop = False
+        self._pending_order_id = None
+        self._pending_ticks = 0
+        self._pending_info = None
         try:
             _st = repo.load_state(self.rid)
             if _st:
