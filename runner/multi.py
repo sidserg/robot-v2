@@ -154,6 +154,34 @@ async def _cross_kill_task(stop_ev, log, cfg, token, mode, loops):
         except asyncio.TimeoutError:
             pass
 
+async def _daily_report_task(stop_ev, log):
+    from datetime import datetime, timezone, timedelta
+    MSK = timezone(timedelta(hours=3))
+    last_date = None
+    while not stop_ev.is_set():
+        try:
+            now = datetime.now(MSK)
+            today = now.strftime("%Y-%m-%d")
+            if now.hour >= 10 and last_date != today:
+                import subprocess, sys
+                _p = str(_ROOT / "tools" / "pnl.py")
+                r = subprocess.run([sys.executable, _p], cwd=str(_ROOT), capture_output=True, text=True, timeout=60)
+                out = (r.stdout or r.stderr or "").strip()
+                log.info("DAILY REPORT:")
+                for ln in out.splitlines():
+                    log.info("  " + ln)
+                try:
+                    from notify import desktop as _nd
+                    _nd.notify("RobotV2: daily report", out.splitlines()[-1] if out else "")
+                except Exception:
+                    pass
+                last_date = today
+        except Exception as e:
+            log.warning("daily report err: %s", str(e)[:120])
+        try:
+            await asyncio.wait_for(stop_ev.wait(), timeout=1800)
+        except asyncio.TimeoutError:
+            pass
 async def run_all():
     cfg = loader.load()
     setup_logging(cfg)
@@ -187,6 +215,7 @@ async def run_all():
         tasks.append(asyncio.create_task(_pilot_task(stop_ev, log, db_path, log_path), name="pilot"))
         tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
         tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
+        tasks.append(asyncio.create_task(_daily_report_task(stop_ev, log), name="daily_report"))
         try:
             await asyncio.gather(*tasks)
         except (asyncio.CancelledError, KeyboardInterrupt):
