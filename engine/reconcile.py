@@ -36,6 +36,7 @@ async def ensure_stop(loop, size, avg):
             same_px.append(_id)
     if same_px:
         keep = same_px[0]
+        loop.stop_fail_count = 0
         loop.stop_order_id = keep
         extras = [x for x in all_figi if x != keep]
     elif all_figi:
@@ -54,10 +55,19 @@ async def ensure_stop(loop, size, avg):
         return
     try:
         r = await od.post_stop_order(loop.c, loop.account_id, loop.figi, size, sp)
+        loop.stop_fail_count = 0
         loop.stop_order_id = r.order_id
         log.info("[robot-%s] stop placed @ %s qty=%s", loop.rid, sp, size)
     except Exception as e:
-        log.error("[robot-%s] stop place failed: %s", loop.rid, str(e)[:120])
+        _fc = int(getattr(loop, "stop_fail_count", 0) or 0) + 1
+        loop.stop_fail_count = _fc
+        log.error("[robot-%s] stop place failed (%s): %s", loop.rid, _fc, str(e)[:120])
+        if _fc >= 3:
+            try:
+                from notify import desktop as _nd
+                _nd.notify_error(loop.rid, "STOP MISSING x" + str(_fc))
+            except Exception:
+                pass
 
 async def reconcile_trades(loop, window_min=60):
     from datetime import datetime, timezone, timedelta
