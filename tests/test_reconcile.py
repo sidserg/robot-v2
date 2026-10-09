@@ -12,6 +12,7 @@ def _mk():
     l.c=MagicMock()
     l.account_id="acc"
     l.figi="FIGI"
+    l._round_price = lambda x: round(x, 2)
     return l
 @pytest.mark.asyncio
 async def test_no_pos():
