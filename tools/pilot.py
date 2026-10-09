@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+import json
+import pathlib
+import time
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+LOG = ROOT / "logs" / "robot.log"
+STATE = ROOT / "logs" / ".pilot_state.json"
+CHECK_SEC = 60
+SILENT_SEC = 180
+STUCK_MIN = 10
+DEDUP_SEC = 300
+
+def _load():
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _save(d):
+    try:
+        STATE.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+def _dedup(state, key):
+    now = time.time()
+    if now - state.get(key, 0) < DEDUP_SEC:
+        return False
+    state[key] = now
+    return True
+
+def _age():
+    if not LOG.exists():
+        return 10**9
+    return time.time() - LOG.stat().st_mtime
+
+def _notify(title, body):
+    try:
+        from notify.desktop import notify
+        notify("Pilot: " + title, body)
+    except Exception:
+        pass
+    print("[pilot] " + title + " - " + body, flush=True)
+
+def _last(n):
+    try:
+        return LOG.read_text(encoding="utf-8", errors="replace").splitlines()[-n:]
+    except Exception:
+        return []
+
+_last_px = {}
+
+def _check_silent(state):
+    _a = _age()
+    if _a > SILENT_SEC:
+        if _dedup(state, "sil"):
+            _notify("log silent", "no changes for " + str(int(_a)) + "s")
+
+def _check_price(state, lines):
+    for x in lines:
+        if ("[robot-" not in x) or ("px=" not in x):
+            continue
+        try:
+            i0 = x.index("[robot-") + 7
+            i1 = x.index("]", i0)
+            rid = x[i0:i1]
+            j0 = x.index("px=") + 3
+            j1 = j0
+            while j1 < len(x) and (x[j1].isdigit() or x[j1] == "."):
+                j1 += 1
+            px = float(x[j0:j1])
+        except Exception:
+            continue
+        prev = _last_px.get(rid)
+        if prev is not None and abs(prev - px) < 1e-9:
+            k = "stuck_" + rid
+            state[k] = state.get(k, 0) + 1
+            if state[k] >= STUCK_MIN and _dedup(state, "n_" + k):
+                _notify("price stuck", "robot " + rid + " px=" + str(px))
+        else:
+            state["stuck_" + rid] = 0
+        _last_px[rid] = px
+
+def main():
+    print("[pilot] start " + str(ROOT), flush=True)
+    state = _load()
+    while True:
+        try:
+            lines = _last(50)
+            _check_silent(state)
+            _check_price(state, lines)
+            _save(state)
+            print("[pilot] ok age=" + str(int(_age())) + "s", flush=True)
+        except Exception as e:
+            print("[pilot] err " + str(e), flush=True)
+        time.sleep(CHECK_SEC)
+
+if __name__ == "__main__":
+    main()
