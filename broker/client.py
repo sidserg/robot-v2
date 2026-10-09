@@ -55,7 +55,7 @@ class TInvestClient:
                     await asyncio.sleep(ra)
                     continue
                 if r.status_code >= 400:
-                    log.error("HTTP %s %s", r.status_code, endpoint)
+                    log.error("HTTP %s %s text=%s", r.status_code, endpoint, r.text)
                     r.raise_for_status()
                 return r.json()
             except Exception as e:

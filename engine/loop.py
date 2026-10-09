@@ -106,10 +106,15 @@ class RobotLoop:
                 repo.save_state(self.rid, last_ts=rec["ts"])
             except Exception:
                 pass
+            self._last_buy_err = None
             log.info("[robot-%s] BUY %s x %s = %s", self.rid, self.ticker, qty, round(qty * price, 2))
             return True
         except Exception as e:
-            log.error("[robot-%s] BUY FAILED: %s", self.rid, str(e)[:200])
+            _emsg = str(e)[:200]
+            if _emsg == getattr(self, "_last_buy_err", None):
+                return False
+            self._last_buy_err = _emsg
+            log.error("[robot-%s] BUY FAILED: %s", self.rid, _emsg)
             _nt.notify_error(self.rid, "BUY FAILED: " + str(e)[:100])
             return False
 

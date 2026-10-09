@@ -33,6 +33,78 @@
         "days_back": 330,
         "timeframe": "D1"
       }
+    },
+    {
+      "id": 2,
+      "enabled": true,
+      "mode": "sandbox",
+      "figi": "BBG004730RP0",
+      "ticker": "GAZP",
+      "account_id": "03ec52bc-6f1b-4ab9-b3f7-3a4e96cde02a",
+      "strategy": "sma",
+      "params": {
+        "fast": 10,
+        "slow": 50,
+        "signal_mode": "slope",
+        "stop_loss": 0.05,
+        "take_profit": 0.15,
+        "trail_pct": 0.0,
+        "qty_limit": 100,
+        "max_position_rub": 100000,
+        "daily_loss_limit": 0.05,
+        "max_drawdown": 0.2,
+        "check_interval": 60,
+        "days_back": 330,
+        "timeframe": "D1"
+      }
+    },
+    {
+      "id": 3,
+      "enabled": true,
+      "mode": "sandbox",
+      "figi": "BBG004S68829",
+      "ticker": "TATNP",
+      "account_id": "cc599793-8217-4c3c-8161-29a4073f2643",
+      "strategy": "sma",
+      "params": {
+        "fast": 5,
+        "slow": 20,
+        "signal_mode": "slope",
+        "stop_loss": 0.05,
+        "take_profit": 0.15,
+        "trail_pct": 0.0,
+        "qty_limit": 100,
+        "max_position_rub": 100000,
+        "daily_loss_limit": 0.05,
+        "max_drawdown": 0.2,
+        "check_interval": 60,
+        "days_back": 330,
+        "timeframe": "D1"
+      }
+    },
+    {
+      "id": 4,
+      "enabled": true,
+      "mode": "sandbox",
+      "figi": "BBG004730ZJ9",
+      "ticker": "VTBR",
+      "account_id": "c1430ffe-e959-43fc-ad89-c60cf3545f5d",
+      "strategy": "sma",
+      "params": {
+        "fast": 5,
+        "slow": 20,
+        "signal_mode": "slope",
+        "stop_loss": 0.05,
+        "take_profit": 0.15,
+        "trail_pct": 0.0,
+        "qty_limit": 100,
+        "max_position_rub": 100000,
+        "daily_loss_limit": 0.05,
+        "max_drawdown": 0.2,
+        "check_interval": 60,
+        "days_back": 330,
+        "timeframe": "D1"
+      }
     }
   ],
   "notify": {
