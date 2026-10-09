@@ -74,12 +74,14 @@ class RobotLoop:
         to_dt = datetime.now(timezone.utc)
         fr_dt = to_dt - timedelta(days=self.days_back)
         interval = INTERVAL_MAP.get(self.timeframe, "CANDLE_INTERVAL_DAY")
-        return await pf.get_candles(
+        _cds = await pf.get_candles(
             self.c, self.figi,
             fr_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
             to_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
             interval,
         )
+        _closed = [c for c in _cds if getattr(c, "is_complete", True)]
+        return _closed if len(_closed) >= 30 else _cds
 
     async def get_position(self):
         p = await pf.get_portfolio(self.c, self.account_id)
