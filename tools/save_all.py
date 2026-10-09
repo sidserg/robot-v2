@@ -15,13 +15,9 @@ def main():
             msg = _raw
         except UnicodeEncodeError:
             msg = "update (cyrillic arg skipped)"
-    print("[1/4] backup DB")
-    rc, out = run([sys.executable, str(R/"tools"/"backup_db.py")])
-    last = out.strip().splitlines()[-1] if out.strip() else "?"
-    print("  "+last)
-    print("[2/4] git add")
+    print("[1/3] git add")
     run(["git","add","-A"])
-    print("[3/4] git commit")
+    print("[2/3] git commit")
     _mf = pathlib.Path(str(R)) / ".commit_msg"
     try:
         _mf.write_text(msg, encoding="utf-8")
@@ -34,7 +30,7 @@ def main():
     else:
         first = out.strip().splitlines()[0] if out.strip() else "ok"
         print("  "+first)
-    print("[4/4] git push")
+    print("[3/3] git push")
     if not TOKEN_FILE.exists():
         print("  no token file")
         print("done (skip push)")
