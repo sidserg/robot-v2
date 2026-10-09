@@ -76,6 +76,18 @@ python -m pytest tests/ -q
 - `docs/BACKTESTS.md` — результаты бэктестов
 - `docs/AI_CHECKLIST.md` — правила работы
 
+## Мониторинг (отдельные окна)
+
+```
+start "robotv2" cmd /k "python runner/multi.py"
+start "watch_robot" cmd /k "python tools/watch_robot.py"
+start "pilot" cmd /k "python tools/pilot.py"
+```
+
+- `runner/multi.py` — N роботов в одном процессе
+- `tools/watch_robot.py` — внешний watchdog: рестарт при мёртвом `logs/robot.log` > 240с
+- `tools/pilot.py` — desktop-алерты: `log silent` (>180с), `price stuck` (>10 циклов), `trade error` (ERROR/REJECTED в `data/robot.db`)
+
 ## Что НЕ входит
 
 - Аналитика портфеля (XIRR, календарь, heatmap) — см. отдельный проект
