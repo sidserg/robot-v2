@@ -82,6 +82,7 @@ class RobotLoop:
         self._offline_count = 0
         self._risk_alerted = False
         self._last_fill_qty = 0.0
+        self._api_stop_price = 0.0
         self._last_candle_ts = ""
         self._stale_candle_count = 0
         try:
@@ -497,6 +498,22 @@ class RobotLoop:
                     ts = self.peak_px * (1 - self.trail)
                     if ts > sl:
                         sl = ts
+                        _new_stop = round(sl, 2)
+                        _old_stop = float(getattr(self, "_api_stop_price", 0) or 0)
+                        if _old_stop <= 0 or abs(_new_stop - _old_stop) / _old_stop > 0.005:
+                            try:
+                                if self.stop_order_id:
+                                    await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
+                                _r = await od.post_stop_order(self.c, self.account_id, self.figi, qty, _new_stop)
+                                self.stop_order_id = _r.order_id
+                                self._api_stop_price = _new_stop
+                                try:
+                                    repo.save_state(self.rid, stop_order_id=self.stop_order_id)
+                                except Exception:
+                                    pass
+                                log.info("[robot-%s] trailing stop moved to %s", self.rid, _new_stop)
+                            except Exception as _te:
+                                log.warning("[robot-%s] trailing stop update fail: %s", self.rid, str(_te)[:100])
             if cur <= sl:
                 await self.do_sell(qty, cur, "stop")
                 return
@@ -558,6 +575,7 @@ class RobotLoop:
                         try:
                             res = await od.post_stop_order(self.c, self.account_id, self.figi, _fill_qty, _sp_chk)
                             self.stop_order_id = res.order_id
+                            self._api_stop_price = _sp_chk
                             try:
                                 repo.save_state(self.rid, stop_order_id=self.stop_order_id)
                             except Exception:

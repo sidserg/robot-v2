@@ -39,6 +39,10 @@ async def ensure_stop(loop, size, avg):
         loop.stop_fail_count = 0
         loop.stop_order_id = keep
         try:
+            loop._api_stop_price = sp
+        except Exception:
+            pass
+        try:
             from db import repo as _rp
             _rp.save_state(loop.rid, stop_order_id=keep)
         except Exception:
@@ -46,6 +50,10 @@ async def ensure_stop(loop, size, avg):
         extras = [x for x in all_figi if x != keep]
     elif all_figi:
         loop.stop_order_id = all_figi[0]
+        try:
+            loop._api_stop_price = sp
+        except Exception:
+            pass
         try:
             from db import repo as _rp
             _rp.save_state(loop.rid, stop_order_id=all_figi[0])
