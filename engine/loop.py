@@ -242,6 +242,15 @@ class RobotLoop:
 
     async def do_sell(self, qty, price, reason="signal"):
         try:
+            _max_spread = float(self.params.get("max_spread_percent", 0.5))
+            if _max_spread > 0 and reason == "signal":
+                try:
+                    _sp = await pf.get_spread_pct(self.c, self.figi)
+                    if _sp >= 0 and _sp > _max_spread:
+                        log.warning("[robot-%s] SELL spread %.2f%% > %.2f%%, skip", self.rid, _sp, _max_spread)
+                        return False
+                except Exception:
+                    pass
             if self.stop_order_id:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
