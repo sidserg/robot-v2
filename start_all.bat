@@ -1,8 +1,6 @@
 @echo off
-cd /d "%~dp0"
-echo Stopping...
-python tools\stop_all.py
+cd /d C:\Users\cl\Desktop\RobotV2
+start "robotv2" cmd /k "cd /d C:\Users\cl\Desktop\RobotV2 && python runner\multi.py"
 timeout /t 3 /nobreak >nul
-echo Starting...
-start "robotv2" cmd /k python runner\multi.py
-echo Done. Dashboard: http://127.0.0.1:8770/
+start "watch_robot" cmd /k "cd /d C:\Users\cl\Desktop\RobotV2 && python tools\watch_robot.py"
+start "pilot" cmd /k "cd /d C:\Users\cl\Desktop\RobotV2 && python tools\pilot.py"
