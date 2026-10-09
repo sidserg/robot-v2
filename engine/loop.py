@@ -81,6 +81,7 @@ class RobotLoop:
         self._force_reconcile = False
         self._offline_count = 0
         self._risk_alerted = False
+        self._last_fill_qty = 0.0
         self._last_candle_ts = ""
         self._stale_candle_count = 0
         try:
@@ -227,15 +228,23 @@ class RobotLoop:
                 self._pending_info = {"robot_id": self.rid, "kind": "BUY", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": _px or price, "total": qty * (_px or price), "commission": 0.0, "order_id": res.order_id, "mode": self.mode, "strategy": self.strategy.name}
                 log.info("[robot-%s] limit %s placed (status=%s), waiting next tick", self.rid, res.order_id, _st)
                 return False
+            _exq = float(getattr(res, "executed_qty", 0) or 0)
+            if _exq <= 0:
+                _exq = qty
+            elif _exq < qty:
+                log.warning("[robot-%s] BUY partial fill %s of %s", self.rid, _exq, qty)
+            _expx = float(getattr(res, "executed_price", 0) or 0)
+            if _expx <= 0:
+                _expx = price
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "kind": "BUY",
                 "ticker": self.ticker,
                 "figi": self.figi,
-                "qty": qty,
-                "price": price,
-                "total": qty * price,
+                "qty": _exq,
+                "price": _expx,
+                "total": _exq * _expx,
                 "commission": res.commission,
                 "order_id": res.order_id,
                 "status": res.status,
@@ -249,7 +258,8 @@ class RobotLoop:
             except Exception:
                 pass
             self._last_buy_err = None
-            log.info("[robot-%s] BUY %s x %s = %s", self.rid, self.ticker, qty, round(qty * price, 2))
+            self._last_fill_qty = _exq
+            log.info("[robot-%s] BUY %s x %s = %s", self.rid, self.ticker, _exq, round(_exq * _expx, 2))
             return True
         except Exception as e:
             _emsg = str(e)[:200]
@@ -527,6 +537,9 @@ class RobotLoop:
             if size > 0:
                 done = await self.do_buy(size, cur)
                 if done:
+                    _fill_qty = float(getattr(self, "_last_fill_qty", 0) or 0)
+                    if _fill_qty <= 0:
+                        _fill_qty = size
                     sp = cur * (1 - self.stop_loss)
                     _sp_chk = round(sp, 2)
                     if _sp_chk <= 0 or _sp_chk >= cur * 0.99 or _sp_chk < cur * 0.5:
@@ -537,7 +550,7 @@ class RobotLoop:
                             pass
                     else:
                         try:
-                            res = await od.post_stop_order(self.c, self.account_id, self.figi, size, _sp_chk)
+                            res = await od.post_stop_order(self.c, self.account_id, self.figi, _fill_qty, _sp_chk)
                             self.stop_order_id = res.order_id
                             try:
                                 repo.save_state(self.rid, stop_order_id=self.stop_order_id)
