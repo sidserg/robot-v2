@@ -4,8 +4,8 @@
 
 ## Что это
 
-Изолированный торговый робот без дашборда и аналитики портфеля.
-Работает с T-Invest API (sandbox и real), поддерживает multi-инстансы.
+Изолированный торговый робот, работает с T-Invest API (sandbox и real), поддерживает multi-инстансы в одном процессе.
+Встроенный веб-дашборд: http://127.0.0.1:8770/
 
 ## Стек
 
@@ -19,17 +19,28 @@
 
 ```
 broker/       — T-Invest API клиент, портфель, ордера, модели
-strategies/   — логика сигналов (SMA)
-engine/       — торговый цикл, риск-менеджмент
-db/           — SQLite (trades, orders, robot_state)
+strategies/   — логика сигналов (SMA, ADX/RSI фильтры)
+engine/       — торговый цикл, риск-менеджмент, lot-aware, budget
+db/           — SQLite (trades, orders, robot_state) + миграции
 notify/       — desktop-тосты
-runner/       — multi-инстансы в одном процессе
+runner/       — multi-инстансы в одном процессе + дашборд
 backtest/     — единый бэктест-движок
 config/       — загрузка config.json
 tests/        — pytest
 docs/         — документация
 tools/        — утилиты
 ```
+
+## Возможности
+
+- Market и Limit-ордера (use_limit=true в params робота)
+- Lot-aware размер позиции (округление вниз до лота, напр. GAZP lot=10)
+- Budget check перед покупкой: свободные деньги + max_position_rub
+- Авто-переподключение httpx при ConnectError/ReadError/RemoteProtocolError/Timeout
+- Прерываемый цикл: Stop за 1-2 секунды, graceful shutdown всех роботов
+- API-стоп-ордера, трейлинг, daily kill-switch, drawdown-stop
+- Reconcile trades/стопов, preflight проверки
+- Desktop-уведомления о сделках и ошибках
 
 ## Установка
 
@@ -45,7 +56,13 @@ pip install -r requirements.txt
 python runner/multi.py
 ```
 
-Роботы берутся из `config.json` → `robots[]`.
+Роботы берутся из `config.json` -> `robots[]`.
+Для real-режима: `armed=true` в config.json (иначе real-роботы блокируются).
+
+## Дашборд
+
+Открывается автоматически при старте: http://127.0.0.1:8770/
+API: http://127.0.0.1:8770/api/state
 
 ## Тесты
 
@@ -61,7 +78,5 @@ python -m pytest tests/ -q
 
 ## Что НЕ входит
 
-- Дашборд портфеля
-- Аналитика (XIRR, календарь, heatmap)
-- Панель управления
+- Аналитика портфеля (XIRR, календарь, heatmap) — см. отдельный проект
 - Telegram
