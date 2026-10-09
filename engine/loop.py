@@ -307,8 +307,14 @@ class RobotLoop:
             log.warning("[robot-%s] not enough candles: %s", self.rid, len(candles))
             return
         qty, avg, cur = await self.get_position()
+        _last_close = candles[-1].close
         if cur <= 0:
-            cur = candles[-1].close
+            cur = _last_close
+        elif _last_close > 0:
+            _dev = abs(cur - _last_close) / _last_close * 100.0
+            if _dev > 15.0:
+                log.warning("[robot-%s] price %.2f deviates %.2f%% from candle %.2f, using candle", self.rid, cur, _dev, _last_close)
+                cur = _last_close
         # periodic reconcile
         if self._force_reconcile and qty <= 0 and self.stop_order_id:
             log.info("[robot-%s] after gap: position closed, clearing stop %s", self.rid, self.stop_order_id)
