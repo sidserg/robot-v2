@@ -31,7 +31,8 @@ async def ensure_stop(loop, size, avg):
         if not _id:
             continue
         all_figi.append(_id)
-        if abs(_px_of(x) - sp) < 0.01:
+        _xp = _px_of(x)
+        if _xp > 0 and sp > 0 and abs(_xp - sp) / sp < 0.02:
             same_px.append(_id)
     if same_px:
         keep = same_px[0]
