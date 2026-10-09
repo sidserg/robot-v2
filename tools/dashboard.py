@@ -158,13 +158,28 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
-def main():
+def start_in_thread():
+    import threading
+    def _run():
+        srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+        try:
+            srv.serve_forever()
+        except Exception:
+            pass
+    t = threading.Thread(target=_run, daemon=True, name="dashboard")
+    t.start()
     print("Dashboard: http://127.0.0.1:" + str(PORT) + "/")
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    return t
+
+
+def main():
+    start_in_thread()
+    import time
     try:
-        srv.serve_forever()
+        while True:
+            time.sleep(3600)
     except KeyboardInterrupt:
-        srv.shutdown()
+        pass
 
 
 if __name__ == "__main__":

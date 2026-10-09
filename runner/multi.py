@@ -49,6 +49,13 @@ async def run_all():
         return
 
     log.info("starting %d robots", len(robots_cfg))
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "tools"))
+        import dashboard
+        dashboard.start_in_thread()
+    except Exception as _de:
+        log.warning("dashboard failed: %s", _de)
 
     _modes = list(set([r.get("mode", "sandbox") for r in robots_cfg]))
     _mode = _modes[0] if _modes else "sandbox"
