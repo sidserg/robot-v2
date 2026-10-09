@@ -1,0 +1,16 @@
+[Unit]
+Description=RobotV2 trading robot
+After=network.target
+
+[Service]
+Type=simple
+User=robot
+WorkingDirectory=/opt/robotv2
+ExecStart=/usr/bin/python3 runner/multi.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/opt/robotv2/logs/robot.log
+StandardError=append:/opt/robotv2/logs/robot.log
+
+[Install]
+WantedBy=multi-user.target
