@@ -8,8 +8,11 @@ from broker.models import Candle
 from backtest.engine import run_backtest
 from strategies.sma import SMAStrategy
 from strategies.grid import GridStrategy
+from strategies.rsi import RSIStrategy
+from strategies.bollinger import BollingerStrategy
+from strategies.macd import MACDStrategy
 DB=R/"data"/"robot.db"
-VARIANTS=[("sma_5_20",lambda:SMAStrategy({"fast":5,"slow":20})),("sma_10_50",lambda:SMAStrategy({"fast":10,"slow":50})),("sma_5_20_tr3",lambda:SMAStrategy({"fast":5,"slow":20})),("grid_10",lambda:GridStrategy({"grid_levels":10,"corridor_days":60,"grid_lower_stop":0.05}))]
+VARIANTS=[("sma_5_20",lambda:SMAStrategy({"fast":5,"slow":20})),("sma_10_50",lambda:SMAStrategy({"fast":10,"slow":50})),("sma_5_20_tr3",lambda:SMAStrategy({"fast":5,"slow":20})),("grid_10",lambda:GridStrategy({"grid_levels":10,"corridor_days":60,"grid_lower_stop":0.05})),("rsi_14",lambda:RSIStrategy({"rsi_period":14,"rsi_low":30,"rsi_high":70})),("bb_20",lambda:BollingerStrategy({"bb_period":20,"bb_mult":2.0})),("macd",lambda:MACDStrategy({"macd_fast":12,"macd_slow":26,"macd_signal":9}))]
 TRAIL={"sma_5_20_tr3":0.03}
 def load(conn,tk):
     rs=conn.execute("SELECT ts,o,h,l,c,v FROM candles WHERE ticker=? ORDER BY ts",(tk,)).fetchall()
