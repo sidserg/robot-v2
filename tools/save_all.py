@@ -11,11 +11,10 @@ def main():
     if len(sys.argv) > 1:
         _raw = " ".join(sys.argv[1:])
         try:
-            _fixed = _raw.encode("cp1251").decode("utf-8")
-            if _fixed:
-                msg = _fixed
-        except Exception:
-            pass
+            _raw.encode("ascii")
+            msg = _raw
+        except UnicodeEncodeError:
+            msg = "update (cyrillic arg skipped)"
     print("[1/4] backup DB")
     rc, out = run([sys.executable, str(R/"tools"/"backup_db.py")])
     last = out.strip().splitlines()[-1] if out.strip() else "?"
