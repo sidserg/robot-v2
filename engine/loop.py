@@ -108,7 +108,8 @@ class RobotLoop:
             return False
         try:
             _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
-            _px = price if _ot == "ORDER_TYPE_LIMIT" else None
+            _off = float(self.params.get("limit_offset", 0.002))
+            _px = round(price * (1 - _off), 2) if _ot == "ORDER_TYPE_LIMIT" else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
             rec = {
                 "robot_id": self.rid,
@@ -149,7 +150,8 @@ class RobotLoop:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
             _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
-            _px = price if _ot == "ORDER_TYPE_LIMIT" else None
+            _off = float(self.params.get("limit_offset", 0.002))
+            _px = round(price * (1 + _off), 2) if _ot == "ORDER_TYPE_LIMIT" else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
             rec = {
                 "robot_id": self.rid,
