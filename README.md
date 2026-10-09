@@ -92,3 +92,18 @@ start "pilot" cmd /k "python tools/pilot.py"
 
 - Аналитика портфеля (XIRR, календарь, heatmap) — см. отдельный проект
 - Telegram
+
+## Защиты от сбоев (2026-10-09)
+
+- **API-стоп на бирже** — работает без интернета (главная защита)
+- **Gap-detection** — offline > 3x interval → force reconcile + alert
+- **Halt после 3 гэпов подряд** — не торгуем вслепую при нестабильной связи
+- **Fresh-price guard** — цена из портфеля > 15% от свечи → берём свечу
+- **Slippage alert** — стоп исполнен хуже ожидаемого > 1% → toast
+- **Drawdown velocity breaker** — потеря 3% за 5 мин → остановка
+- **Anomaly guard** — qty>0, avg=0 → alert + skip
+- **max_jump_percent** — блок новых входов при скачке > 5%
+- **Pending persistence** — лимитник переживает рестарт
+- **Limit timeout + market fallback** — 3 тика, потом market
+- **Reconnect httpx** — авто-сброс клиента при ошибках сети
+- **Stop reconcile** — поиск по figi+цене (2%), отмена лишних
