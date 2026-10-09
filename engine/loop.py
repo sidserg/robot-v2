@@ -302,6 +302,17 @@ class RobotLoop:
                 await self.do_sell(qty, cur, "tp")
                 return
 
+        _max_jump = float(self.params.get("max_jump_percent", 5.0))
+        _jump_ok = True
+        if _max_jump > 0 and len(candles) >= 2:
+            _prev = candles[-2].close
+            if _prev > 0:
+                _jmp = abs(cur - _prev) / _prev * 100.0
+                if _jmp > _max_jump:
+                    log.warning("[robot-%s] jump %.2f%% > %.2f%%, skip signal this tick", self.rid, _jmp, _max_jump)
+                    _jump_ok = False
+        if not _jump_ok:
+            return
         sig = self.strategy.signal(candles, qty, avg)
         if sig.action == "BUY" and qty <= 0:
             _max_spread = float(self.params.get("max_spread_percent", 0.5))
