@@ -9,6 +9,7 @@ from broker import portfolio as pf
 from broker import orders as od
 from broker import preflight as _pfl
 from broker import schedule as _sch
+import pathlib
 from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
@@ -71,6 +72,7 @@ class RobotLoop:
         self._reconcile_every = int(params.get("reconcile_every", 20))
         self.lot = 1
         self._stop = False
+        self._paused = False
         self._pending_order_id = None
         self._pending_ticks = 0
         self._pending_info = None
@@ -337,8 +339,22 @@ class RobotLoop:
             _nt.notify_error(self.rid, "SELL FAILED: " + str(e)[:100])
             return False
 
+    def _read_paused(self):
+        import json as _j
+        try:
+            _pf = pathlib.Path(str(self.cfg.get("db_path", "data/robot.db")).replace("robot.db", "paused.json"))
+            if _pf.exists():
+                d = _j.loads(_pf.read_text(encoding="utf-8"))
+                return bool(d.get(str(self.rid), False))
+        except Exception:
+            pass
+        return False
+
     async def tick(self):
         self._tick_count += 1
+        self._paused = self._read_paused()
+        if self._paused:
+            return
         _ok, _why = _sch.is_trading_now()
         if not _ok:
             if self._tick_count % 20 == 1:

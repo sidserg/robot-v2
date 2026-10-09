@@ -85,6 +85,23 @@ setInterval(function(){fetch('/api/state').then(function(r){return r.json();}).t
 """
 
 
+PAUSED_FILE = ROOT / "data" / "paused.json"
+
+def _read_paused():
+    try:
+        if PAUSED_FILE.exists():
+            return json.loads(PAUSED_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+def _write_paused(d):
+    try:
+        PAUSED_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PAUSED_FILE.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
 def _read_token():
     cfg = loader.load()
     p = pathlib.Path(cfg.get("token_file", "token.txt"))
@@ -92,7 +109,7 @@ def _read_token():
 
 
 async def _collect():
-    out = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "states": [], "positions": [], "trades": []}
+    out = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "states": [], "positions": [], "trades": [], "paused": _read_paused()}
     try:
         out["states"] = repo.list_states()
     except Exception:
@@ -156,6 +173,26 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if self.path == "/api/pause":
+            try:
+                _ln = int(self.headers.get("Content-Length", 0))
+                _body = self.rfile.read(_ln).decode("utf-8") if _ln else "{}"
+                _d = json.loads(_body)
+                _rid = str(_d.get("robot_id", ""))
+                _val = bool(_d.get("paused", False))
+                _cur = _read_paused()
+                _cur[_rid] = _val
+                _write_paused(_cur)
+                _resp = {"ok": True, "paused": _val}
+            except Exception as e:
+                _resp = {"ok": False, "msg": str(e)[:200]}
+            _b = json.dumps(_resp, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(_b)))
+            self.end_headers()
+            self.wfile.write(_b)
+            return
         if self.path == "/api/save":
             import subprocess, sys
             try:
