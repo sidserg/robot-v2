@@ -154,6 +154,21 @@ async def _cross_kill_task(stop_ev, log, cfg, token, mode, loops):
         except asyncio.TimeoutError:
             pass
 
+async def _schedule_refresh_task(stop_ev, log):
+    import subprocess, sys
+    _p = str(_ROOT / "tools" / "refresh_schedule.py")
+    while not stop_ev.is_set():
+        try:
+            r = subprocess.run([sys.executable, _p], cwd=str(_ROOT), capture_output=True, text=True, timeout=60)
+            if r.returncode == 0:
+                log.info("schedule refreshed")
+        except Exception as e:
+            log.warning("schedule refresh err: %s", str(e)[:120])
+        try:
+            await asyncio.wait_for(stop_ev.wait(), timeout=21600)
+        except asyncio.TimeoutError:
+            pass
+
 async def _daily_report_task(stop_ev, log):
     from datetime import datetime, timezone, timedelta
     MSK = timezone(timedelta(hours=3))
@@ -216,6 +231,7 @@ async def run_all():
         tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
         tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
         tasks.append(asyncio.create_task(_daily_report_task(stop_ev, log), name="daily_report"))
+        tasks.append(asyncio.create_task(_schedule_refresh_task(stop_ev, log), name="schedule_refresh"))
         try:
             await asyncio.gather(*tasks)
         except (asyncio.CancelledError, KeyboardInterrupt):
