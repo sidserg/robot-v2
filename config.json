@@ -4,7 +4,7 @@
   "db_path": "data/robot.db",
   "token_file": "token.txt",
   "tinvest": {
-    "base_url": "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.",
+    "base_url": "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1",
     "timeout_sec": 30,
     "retries": 3,
     "rate_limit_per_min": 200
