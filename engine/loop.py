@@ -247,6 +247,15 @@ class RobotLoop:
             except Exception:
                 pass
             log.info("[robot-%s] SELL %s x %s = %s (%s)", self.rid, self.ticker, qty, round(qty * price, 2), reason)
+            _exec_px = float(getattr(res, "executed_price", 0) or 0)
+            if _exec_px > 0 and price > 0:
+                _slip = abs(_exec_px - price) / price * 100.0
+                if _slip > 1.0:
+                    log.warning("[robot-%s] SELL slippage %.2f%%: want %s got %s (%s)", self.rid, _slip, round(price,2), round(_exec_px,2), reason)
+                    try:
+                        _nt.notify_error(self.rid, "slip %.2f%% " % _slip + reason)
+                    except Exception:
+                        pass
             self.peak_px = 0.0
             self.armed = False
             try:
