@@ -51,3 +51,43 @@ config.json, broker/ (client.py, models.py), strategies/ (sma.py, grid.py), engi
 Самое ценное для переноса: BACKTESTS.md, CONTEXT.md, RULES.md, опыт (SMA-slope на трендовых, Grid в боковике, трейлинг только D1+тренд, ОФЗ держать).
 
 Технологии - 20% успеха. Остальные 80% - дисциплина тестирования и документирования.
+---
+
+## 9. Что реализовано в RobotV2 (2026-10-09)
+
+Проверено в sandbox, 4 робота: TATN, GAZP, TATNP, VTBR (SMA 5/20 D1).
+
+### Broker
+- httpx async, auto-reconnect (ConnectError/ReadError/Timeout/PoolTimeout)
+- Rate limit, retry, 429
+- Spread check перед ордером
+- Market + Limit ордера (limit_offset=0.002)
+- API-стоп-ордера, cancel, get_stop_orders
+
+### Engine
+- Прерываемый цикл (Stop за 1-2 сек), graceful shutdown
+- Lot-aware sizing (_floor_lot, GAZP lot=10)
+- Budget check: свободные деньги + max_position_rub
+- Risk: daily kill-switch, drawdown, global loss
+- Reconcile: stop по figi+stopPrice (2% допуск), отмена лишних
+- Stop missing alert: 3 фейла подряд → desktop toast
+
+### Данные
+- SQLite WAL: trades, orders, robot_state, миграции
+- Auto-backup БД раз в сутки (pilot), keep 7 дней
+- Desktop-тосты о сделках и ошибках
+
+### Мониторинг
+- tools/watch_robot.py — рестарт при мёртвом логе >240с
+- tools/pilot.py — алерты: log silent, price stuck, trade ERROR/REJECTED, backup
+- start_all.bat + install_autostart.py (Startup)
+- Дашборд на http://127.0.0.1:8770/
+
+### Утилиты
+- tools/pnl.py — P&L сводка из БД
+- tools/vs_buyhold.py — SMA vs Buy&Hold (альфа +11..+41 п.п. на 2г)
+- tools/run_offset_test.py — limit offset 0.1/0.2/0.3/0.5%
+- tools/backup_db.py — backup + purge 7 дней
+
+### Тесты
+- 37 passed (client, engine, grid, sma, risk, reconcile, lot_budget)
