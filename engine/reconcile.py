@@ -38,9 +38,19 @@ async def ensure_stop(loop, size, avg):
         keep = same_px[0]
         loop.stop_fail_count = 0
         loop.stop_order_id = keep
+        try:
+            from db import repo as _rp
+            _rp.save_state(loop.rid, stop_order_id=keep)
+        except Exception:
+            pass
         extras = [x for x in all_figi if x != keep]
     elif all_figi:
         loop.stop_order_id = all_figi[0]
+        try:
+            from db import repo as _rp
+            _rp.save_state(loop.rid, stop_order_id=all_figi[0])
+        except Exception:
+            pass
         extras = all_figi[1:]
     else:
         extras = []
