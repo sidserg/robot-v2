@@ -18,3 +18,18 @@ def test_first_tick_hold():
     cs = _candles([100.0 + (i % 5) * 0.1 for i in range(30)])
     sig = s.signal(cs, 0, 0)
     assert sig.action == "HOLD"
+
+
+def test_outside_corridor():
+    s = GridStrategy({"grid_levels": 10})
+    prices = [100.0 + (i % 5) * 0.1 for i in range(30)] + [200.0]
+    cs = _candles(prices)
+    sig = s.signal(cs, 0, 0)
+    assert sig.action == "HOLD"
+
+
+def test_level_index_changes():
+    s = GridStrategy({"grid_levels": 10})
+    cs = _candles([100.0 + (i % 5) * 0.1 for i in range(30)])
+    s.signal(cs, 0, 0)
+    assert s._last_level is not None

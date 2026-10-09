@@ -42,3 +42,5 @@ logs/
 fix_*.py
 *_view.txt
 _*.py
+# Dumps for chat
+dump/
