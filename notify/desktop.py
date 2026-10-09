@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """desktop.py - windows toast notifications (silent)."""
 from __future__ import annotations
+import ctypes
 import logging
+try:
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("RobotV2.Notifications")
+except Exception:
+    pass
 from typing import Any, Optional
 log = logging.getLogger("notify.desktop")
 _TOASTER = None
