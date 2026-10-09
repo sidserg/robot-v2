@@ -190,6 +190,13 @@ class RobotLoop:
             _px = round(price * (1 - _off), 2) if _use_lim else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
             _st = (res.status or "").upper()
+            if not res.order_id or len(str(res.order_id)) < 8:
+                log.error("[robot-%s] BUY empty order_id, status=%s", self.rid, _st)
+                try:
+                    _nt.notify_error(self.rid, "BUY empty order_id")
+                except Exception:
+                    pass
+                return False
             if _ot == "ORDER_TYPE_LIMIT" and "FILL" not in _st:
                 self._pending_order_id = res.order_id
                 self._pending_ticks = 0
@@ -242,6 +249,13 @@ class RobotLoop:
             _px = None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
             _st = (res.status or "").upper()
+            if not res.order_id or len(str(res.order_id)) < 8:
+                log.error("[robot-%s] SELL empty order_id, status=%s", self.rid, _st)
+                try:
+                    _nt.notify_error(self.rid, "SELL empty order_id")
+                except Exception:
+                    pass
+                return False
             if "REJECT" in _st:
                 log.error("[robot-%s] SELL REJECTED: %s", self.rid, _st)
                 try:
