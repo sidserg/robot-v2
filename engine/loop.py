@@ -306,15 +306,21 @@ class RobotLoop:
                 except Exception:
                     pass
                 return False
+            _exq = float(getattr(res, "executed_qty", 0) or 0)
+            if _exq <= 0:
+                _exq = qty
+            _expx = float(getattr(res, "executed_price", 0) or 0)
+            if _expx <= 0:
+                _expx = price
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "kind": "SELL",
                 "ticker": self.ticker,
                 "figi": self.figi,
-                "qty": qty,
-                "price": price,
-                "total": qty * price,
+                "qty": _exq,
+                "price": _expx,
+                "total": _exq * _expx,
                 "commission": res.commission,
                 "order_id": res.order_id,
                 "status": res.status,
@@ -327,7 +333,7 @@ class RobotLoop:
                 repo.save_state(self.rid, last_ts=rec["ts"])
             except Exception:
                 pass
-            log.info("[robot-%s] SELL %s x %s = %s (%s)", self.rid, self.ticker, qty, round(qty * price, 2), reason)
+            log.info("[robot-%s] SELL %s x %s = %s (%s)", self.rid, self.ticker, _exq, round(_exq * _expx, 2), reason)
             _exec_px = float(getattr(res, "executed_price", 0) or 0)
             if _exec_px > 0 and price > 0:
                 _slip = abs(_exec_px - price) / price * 100.0
