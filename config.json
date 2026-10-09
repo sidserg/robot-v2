@@ -1,0 +1,46 @@
+{
+  "log_level": "INFO",
+  "log_file": "logs/robot.log",
+  "db_path": "data/robot.db",
+  "token_file": "token.txt",
+  "tinvest": {
+    "base_url": "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.",
+    "timeout_sec": 30,
+    "retries": 3,
+    "rate_limit_per_min": 200
+  },
+  "robots": [
+    {
+      "id": 1,
+      "enabled": false,
+      "mode": "sandbox",
+      "figi": "BBG004S68829",
+      "ticker": "TATNP",
+      "account_id": "",
+      "strategy": "sma",
+      "params": {
+        "fast": 5,
+        "slow": 20,
+        "signal_mode": "slope",
+        "stop_loss": 0.05,
+        "take_profit": 0.15,
+        "trail_pct": 0.0,
+        "qty_limit": 150,
+        "max_position_rub": 100000,
+        "daily_loss_limit": 0.05,
+        "max_drawdown": 0.2,
+        "check_interval": 60,
+        "days_back": 330
+      }
+    }
+  ],
+  "notify": {
+    "desktop": true,
+    "warn_on_errors": true,
+    "warn_on_warnings": false
+  },
+  "watchdog": {
+    "stall_sec": 240,
+    "check_sec": 60
+  }
+}

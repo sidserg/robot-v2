@@ -1,0 +1,44 @@
+# Secrets
+token.txt
+*.token
+token_gh.txt
+
+# Caches
+*.db
+*.db-wal
+*.db-shm
+data/*.json
+
+# Backups
+*.bak_*
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+*.out.log
+
+# Test
+.pytest_cache/
+
+# Temp
+fix_*.py
+*_view.txt
+_*.py
