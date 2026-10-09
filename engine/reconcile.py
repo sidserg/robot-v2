@@ -16,7 +16,8 @@ def _px_of(stop):
 async def ensure_stop(loop, size, avg):
     if size <= 0 or avg <= 0:
         return
-    sp = round(avg * (1 - loop.stop_loss), 2)
+    _rp = getattr(loop, "_round_price", None)
+    sp = _rp(avg * (1 - loop.stop_loss)) if _rp else round(avg * (1 - loop.stop_loss), 2)
     try:
         active = await od.get_stop_orders(loop.c, loop.account_id)
     except Exception as e:

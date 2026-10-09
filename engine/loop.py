@@ -83,6 +83,7 @@ class RobotLoop:
         self._risk_alerted = False
         self._last_fill_qty = 0.0
         self._api_stop_price = 0.0
+        self.min_price_step = 0.0
         self._last_candle_ts = ""
         self._stale_candle_count = 0
         try:
@@ -132,6 +133,13 @@ class RobotLoop:
             if _left <= 0:
                 break
             await asyncio.sleep(min(1.0, _left))
+
+    def _round_price(self, price):
+        _step = float(getattr(self, "min_price_step", 0.0) or 0.0)
+        if _step <= 0:
+            return round(price, 2)
+        n = round(price / _step)
+        return round(n * _step, 6)
 
     def _floor_lot(self, qty, lot):
         n = int(qty)
@@ -209,7 +217,7 @@ class RobotLoop:
             _use_lim = bool(self.params.get("use_limit", False)) and not _force_market
             _ot = "ORDER_TYPE_LIMIT" if _use_lim else "ORDER_TYPE_MARKET"
             _off = float(self.params.get("limit_offset", 0.002))
-            _px = round(price * (1 - _off), 2) if _use_lim else None
+            _px = self._round_price(price * (1 - _off)) if _use_lim else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
             _st = (res.status or "").upper()
             if not res.order_id or len(str(res.order_id)) < 8:
@@ -498,7 +506,7 @@ class RobotLoop:
                     ts = self.peak_px * (1 - self.trail)
                     if ts > sl:
                         sl = ts
-                        _new_stop = round(sl, 2)
+                        _new_stop = self._round_price(sl)
                         _old_stop = float(getattr(self, "_api_stop_price", 0) or 0)
                         if _old_stop <= 0 or abs(_new_stop - _old_stop) / _old_stop > 0.005:
                             try:
@@ -564,7 +572,7 @@ class RobotLoop:
                     if _fill_qty <= 0:
                         _fill_qty = size
                     sp = cur * (1 - self.stop_loss)
-                    _sp_chk = round(sp, 2)
+                    _sp_chk = self._round_price(sp)
                     if _sp_chk <= 0 or _sp_chk >= cur * 0.99 or _sp_chk < cur * 0.5:
                         log.error("[robot-%s] stop price suspicious: sp=%s cur=%s, skip", self.rid, _sp_chk, cur)
                         try:
@@ -595,6 +603,11 @@ class RobotLoop:
             _instr = await pf.get_instrument(self.c, self.figi)
             _it = _instr.get("instrumentType", "")
             self.lot = int(_instr.get("lot", 1) or 1)
+            _mpi = _instr.get("minPriceIncrement") or {}
+            try:
+                self.min_price_step = float(_mpi.get("units",0) or 0) + float(_mpi.get("nano",0) or 0) / 1e9
+            except Exception:
+                self.min_price_step = 0.0
             if _it not in ("share", "etf", "bond", "currency"):
                 log.warning("[robot-%s] unknown instrument type: %s", self.rid, _it)
         except Exception as _e:
