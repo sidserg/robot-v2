@@ -41,7 +41,6 @@ async def reconcile_trades(loop, window_min=60):
         log.warning("[robot-%s] reconcile ops failed: %s", loop.rid, str(e)[:120])
         return 0
     my = repo.get_trades(limit=200, robot_id=loop.rid)
-    my_oids = {t.get("order_id", "") for t in my if t.get("order_id")}
     missing = []
     for o in ops:
         if o.get("figi") != loop.figi:
@@ -49,8 +48,15 @@ async def reconcile_trades(loop, window_min=60):
         st = (o.get("state", "") or "").upper()
         if st != "OPERATION_STATE_EXECUTED":
             continue
-        oid = o.get("parentOperationId") or o.get("id") or ""
-        if oid and oid not in my_oids:
+        # сверяем по (figi, дата) - в T-Invest id операции != order_id
+        odate = (o.get("date", "") or "")[:16]
+        found = False
+        for t in my:
+            tdate = (t.get("ts", "") or "").replace(" ", "T")[:16]
+            if tdate == odate:
+                found = True
+                break
+        if not found:
             missing.append(o)
     if missing:
         log.warning("[robot-%s] T-Invest sees %s ops not in DB", loop.rid, len(missing))

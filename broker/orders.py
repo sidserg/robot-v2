@@ -20,10 +20,12 @@ def _money(val) -> dict:
         nano = 0
     return {"units": str(units), "nano": nano}
 
-async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, direction: str, order_type: str = "ORDER_TYPE_MARKET", order_id: Optional[str] = None) -> OrderResult:
+async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, direction: str, order_type: str = "ORDER_TYPE_MARKET", order_id: Optional[str] = None, price: Optional[float] = None) -> OrderResult:
     if not order_id:
         order_id = str(uuid.uuid4())
     body = {"instrumentId": figi, "quantity": str(int(qty)), "direction": direction, "accountId": account_id, "orderType": order_type, "orderId": order_id}
+    if order_type == "ORDER_TYPE_LIMIT" and price and price > 0:
+        body["price"] = _money(price)
     r = await c.call("OrdersService/PostOrder", body, retries=1)
     return OrderResult(order_id=r.get("orderId", order_id), status=r.get("executionReportStatus", ""), executed_qty=_f(r.get("lotsExecuted")), executed_price=_f(r.get("executedOrderPrice")), commission=_f(r.get("executedCommission")), raw=r)
 

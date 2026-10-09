@@ -84,7 +84,9 @@ class RobotLoop:
 
     async def do_buy(self, qty, price):
         try:
-            res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY")
+            _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
+            _px = price if _ot == "ORDER_TYPE_LIMIT" else None
+            res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -123,7 +125,9 @@ class RobotLoop:
             if self.stop_order_id:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
-            res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL")
+            _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
+            _px = price if _ot == "ORDER_TYPE_LIMIT" else None
+            res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
