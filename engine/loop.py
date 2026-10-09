@@ -62,6 +62,7 @@ class RobotLoop:
         self._pending_order_id = None
         self._pending_ticks = 0
         self._pending_info = None
+        self._pending_result = None
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -145,7 +146,10 @@ class RobotLoop:
             return "DEAD"
 
     async def do_buy(self, qty, price):
-        _p = await self._check_pending()
+        _p = self._pending_result or "NONE"
+        self._pending_result = None
+        if _p == "NONE":
+            _p = await self._check_pending()
         if _p == "WAIT":
             log.info("[robot-%s] pending %s still open, skip", self.rid, self._pending_order_id)
             return False
@@ -252,7 +256,9 @@ class RobotLoop:
     async def tick(self):
         self._tick_count += 1
         if self._pending_order_id:
-            await self._check_pending()
+            _r = await self._check_pending()
+            if _r in ("FILL","FALLBACK","DEAD"):
+                self._pending_result = _r
         try:
             repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         except Exception:
