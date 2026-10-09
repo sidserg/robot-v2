@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from broker import portfolio as pf
 from broker import orders as od
 from broker import preflight as _pfl
+from broker import schedule as _sch
 from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
@@ -338,6 +339,11 @@ class RobotLoop:
 
     async def tick(self):
         self._tick_count += 1
+        _ok, _why = _sch.is_trading_now()
+        if not _ok:
+            if self._tick_count % 20 == 1:
+                log.info("[robot-%s] exchange %s, skip tick", self.rid, _why)
+            return
         _now_ts = time.time()
         _gap = 0.0
         if self._last_tick_time > 0:

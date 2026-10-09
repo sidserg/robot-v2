@@ -35,7 +35,8 @@
         "use_limit": true,
         "limit_offset": 0.002,
         "velocity_limit": 0.03,
-        "velocity_window_sec": 300
+        "velocity_window_sec": 300,
+        "max_jump_percent": 15.0
       }
     },
     {
@@ -66,7 +67,8 @@
         "velocity_window_sec": 300,
         "macd_fast": 12,
         "macd_slow": 26,
-        "macd_signal": 9
+        "macd_signal": 9,
+        "max_jump_percent": 15.0
       }
     },
     {
@@ -94,7 +96,8 @@
         "use_limit": true,
         "limit_offset": 0.002,
         "velocity_limit": 0.03,
-        "velocity_window_sec": 300
+        "velocity_window_sec": 300,
+        "max_jump_percent": 15.0
       }
     },
     {
@@ -122,7 +125,8 @@
         "use_limit": true,
         "limit_offset": 0.002,
         "velocity_limit": 0.03,
-        "velocity_window_sec": 300
+        "velocity_window_sec": 300,
+        "max_jump_percent": 15.0
       }
     },
     {
@@ -150,7 +154,8 @@
         "use_limit": true,
         "limit_offset": 0.002,
         "velocity_limit": 0.03,
-        "velocity_window_sec": 300
+        "velocity_window_sec": 300,
+        "max_jump_percent": 15.0
       }
     }
   ],

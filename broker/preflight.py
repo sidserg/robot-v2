@@ -8,7 +8,10 @@ async def check_real(c: TInvestClient, figi: str, ticker: str, use_limit: bool =
     try:
         r = await c.call("InstrumentsService/GetTradingStatus", {"figi": figi})
     except Exception as e:
-        return False, "GetTradingStatus failed: " + str(e)[:120]
+        _m = str(e)
+        if "404" in _m or "Unimplemented" in _m:
+            return True, ticker + ": preflight skipped (sandbox)"
+        return False, "GetTradingStatus failed: " + _m[:120]
     api = bool(r.get("apiTradeAvailableFlag", False))
     mo = bool(r.get("marketOrderAvailableFlag", False))
     lo = bool(r.get("limitOrderAvailableFlag", False))
