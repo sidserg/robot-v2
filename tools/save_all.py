@@ -9,7 +9,13 @@ def run(cmd):
 def main():
     msg = "auto-save "+time.strftime("%Y-%m-%d %H:%M")
     if len(sys.argv) > 1:
-        msg = " ".join(sys.argv[1:])
+        _raw = " ".join(sys.argv[1:])
+        try:
+            _fixed = _raw.encode("cp1251").decode("utf-8")
+            if _fixed:
+                msg = _fixed
+        except Exception:
+            pass
     print("[1/4] backup DB")
     rc, out = run([sys.executable, str(R/"tools"/"backup_db.py")])
     last = out.strip().splitlines()[-1] if out.strip() else "?"
