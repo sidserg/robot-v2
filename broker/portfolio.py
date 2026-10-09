@@ -43,6 +43,24 @@ async def get_last_price(c: TInvestClient, figi: str) -> float:
         return 0.0
     return _f(prices[0].get("price"))
 
+async def get_spread_pct(c: TInvestClient, figi: str) -> float:
+    try:
+        r = await c.call("MarketDataService/GetOrderBook", {"instrumentId": figi, "depth": 1})
+        bids = r.get("bids", []) or []
+        asks = r.get("asks", []) or []
+        if not bids or not asks:
+            return -1.0
+        _b = _f(bids[0].get("price"))
+        _a = _f(asks[0].get("price"))
+        if _b <= 0 or _a <= 0:
+            return -1.0
+        _mid = (_a + _b) / 2.0
+        if _mid <= 0:
+            return -1.0
+        return round((_a - _b) / _mid * 100.0, 3)
+    except Exception:
+        return -1.0
+
 async def get_instrument(c: TInvestClient, figi: str) -> dict:
     r = await c.call("InstrumentsService/GetInstrumentBy", {"idType": "INSTRUMENT_ID_TYPE_FIGI", "id": figi})
     return r.get("instrument", {})
