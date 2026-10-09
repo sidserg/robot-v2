@@ -87,6 +87,7 @@ class RobotLoop:
                 "strategy": self.strategy.name,
             }
             repo.add_trade(rec)
+            _nt.notify_trade(rec)
             log.info("[robot-%s] BUY %s x %s = %s", self.rid, self.ticker, qty, round(qty * price, 2))
             return True
         except Exception as e:
@@ -115,6 +116,7 @@ class RobotLoop:
                 "strategy": self.strategy.name,
             }
             repo.add_trade(rec)
+            _nt.notify_trade(rec)
             log.info("[robot-%s] SELL %s x %s = %s (%s)", self.rid, self.ticker, qty, round(qty * price, 2), reason)
             self.peak_px = 0.0
             self.armed = False
