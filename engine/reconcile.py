@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-"""reconcile.py - сверка позиции и стопа с T-Invest."""
 from __future__ import annotations
 import logging
 from broker import orders as od
@@ -7,30 +6,59 @@ from broker import portfolio as pf
 
 log = logging.getLogger("engine.reconcile")
 
+def _px_of(stop):
+    m = stop.get("stopPrice") or {}
+    try:
+        return float(m.get("units",0)) + float(m.get("nano",0))/1e9
+    except Exception:
+        return 0.0
+
 async def ensure_stop(loop, size, avg):
-    """Если у робота есть позиция, но нет активного стопа - поставить."""
     if size <= 0 or avg <= 0:
         return
-    if loop.stop_order_id:
-        try:
-            active = await od.get_stop_orders(loop.c, loop.account_id)
-            ids = [x.get("stopOrderId", "") for x in active]
-            if loop.stop_order_id in ids:
-                return
-            log.warning("[robot-%s] stop %s not active, re-placing", loop.rid, loop.stop_order_id)
-            loop.stop_order_id = None
-        except Exception as e:
-            log.warning("[robot-%s] stop check failed: %s", loop.rid, str(e)[:120])
-    sp = avg * (1 - loop.stop_loss)
+    sp = round(avg * (1 - loop.stop_loss), 2)
     try:
-        r = await od.post_stop_order(loop.c, loop.account_id, loop.figi, size, round(sp, 2))
+        active = await od.get_stop_orders(loop.c, loop.account_id)
+    except Exception as e:
+        log.warning("[robot-%s] stop check failed: %s", loop.rid, str(e)[:120])
+        return
+    same_px = []
+    all_figi = []
+    for x in active:
+        if x.get("figi") != loop.figi:
+            continue
+        _id = x.get("stopOrderId") or ""
+        if not _id:
+            continue
+        all_figi.append(_id)
+        if abs(_px_of(x) - sp) < 0.01:
+            same_px.append(_id)
+    if same_px:
+        keep = same_px[0]
+        loop.stop_order_id = keep
+        extras = [x for x in all_figi if x != keep]
+    elif all_figi:
+        loop.stop_order_id = all_figi[0]
+        extras = all_figi[1:]
+    else:
+        extras = []
+    if all_figi:
+        if extras:
+            log.warning("[robot-%s] cancel %s extra stops", loop.rid, len(extras))
+        for extra in extras:
+            try:
+                await od.cancel_stop_order(loop.c, loop.account_id, extra)
+            except Exception:
+                pass
+        return
+    try:
+        r = await od.post_stop_order(loop.c, loop.account_id, loop.figi, size, sp)
         loop.stop_order_id = r.order_id
-        log.info("[robot-%s] stop re-placed @ %s qty=%s", loop.rid, round(sp, 2), size)
+        log.info("[robot-%s] stop placed @ %s qty=%s", loop.rid, sp, size)
     except Exception as e:
         log.error("[robot-%s] stop place failed: %s", loop.rid, str(e)[:120])
 
 async def reconcile_trades(loop, window_min=60):
-    """Сверяем operations T-Invest за окно с trades в БД. Возвращает число missing."""
     from datetime import datetime, timezone, timedelta
     from db import repo
     try:
@@ -48,7 +76,6 @@ async def reconcile_trades(loop, window_min=60):
         st = (o.get("state", "") or "").upper()
         if st != "OPERATION_STATE_EXECUTED":
             continue
-        # сверяем по (figi, дата) - в T-Invest id операции != order_id
         odate = (o.get("date", "") or "")[:16]
         found = False
         for t in my:
