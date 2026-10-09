@@ -48,7 +48,7 @@ def add_trade(rec: dict[str, Any]) -> int:
         finally:
             conn.close()
 
-def get_trades(robot_id: int | None = None, limit: int = 100) -> list[dict[str, Any]]:
+def get_trades(limit: int = 100, robot_id: int | None = None) -> list[dict[str, Any]]:
     with _lock:
         conn = _connect()
         try:

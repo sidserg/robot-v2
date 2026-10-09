@@ -28,7 +28,7 @@ async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, d
     return OrderResult(order_id=r.get("orderId", order_id), status=r.get("executionReportStatus", ""), executed_qty=_f(r.get("lotsExecuted")), executed_price=_f(r.get("executedOrderPrice")), commission=_f(r.get("executedCommission")), raw=r)
 
 async def post_stop_order(c: TInvestClient, account_id: str, figi: str, qty: float, stop_price: float, direction: str = "STOP_ORDER_DIRECTION_SELL") -> OrderResult:
-    body = {"figi": figi, "quantity": str(int(qty)), "stopPrice": _money(stop_price), "direction": direction, "accountId": account_id, "stopOrderType": "STOP_ORDER_TYPE_TAKE_PROFIT", "expirationType": "STOP_ORDER_EXPIRATION_TYPE_GOOD_TILL_CANCEL"}
+    body = {"instrumentId": figi, "quantity": str(int(qty)), "stopPrice": _money(stop_price), "direction": direction, "accountId": account_id, "stopOrderType": "STOP_ORDER_TYPE_STOP_LOSS", "expirationType": "STOP_ORDER_EXPIRATION_TYPE_GOOD_TILL_CANCEL"}
     r = await c.call("StopOrdersService/PostStopOrder", body, retries=1)
     return OrderResult(order_id=r.get("stopOrderId", ""), status="STOP", raw=r)
 

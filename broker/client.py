@@ -10,11 +10,15 @@ from config import loader
 log = logging.getLogger("broker.client")
 
 class TInvestClient:
-    def __init__(self, token, base_url=None, timeout=30.0, retries=3):
+    def __init__(self, token, base_url=None, timeout=30.0, retries=3, mode=None):
         cfg = loader.load()
         ti = cfg.get("tinvest", {})
         self.token = token.strip()
-        self.base_url = (base_url or ti.get("base_url") or "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1.").rstrip("/")
+        _SB = "https://sandbox-invest-public-api.tinkoff.ru/rest/tinkoff.public.invest.api.contract.v1"
+        _RE = "https://invest-public-api.tbank.ru/rest/tinkoff.public.invest.api.contract.v1"
+        _m = (mode or ti.get("mode", "sandbox"))
+        _default = _SB if _m == "sandbox" else _RE
+        self.base_url = (base_url or ti.get("base_url") or _default).rstrip("/").rstrip(".")
         self.timeout = float(timeout or ti.get("timeout_sec", 30))
         self.retries = int(retries or ti.get("retries", 3))
         self._client = None
@@ -40,7 +44,7 @@ class TInvestClient:
             try:
                 r = await self._client.post(url, json=body, headers=self._headers())
                 if r.status_code >= 400:
-                    log.error("HTTP error", r.status_code, endpoint)
+                    log.error("HTTP %s %s", r.status_code, endpoint)
                     r.raise_for_status()
                 return r.json()
             except Exception as e:

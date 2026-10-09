@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """multi.py - запуск N роботов в одном asyncio-процессе."""
 from __future__ import annotations
+import pathlib as _pl
+import sys as _sys
+_ROOT = _pl.Path(__file__).resolve().parent.parent
+if str(_ROOT) not in _sys.path:
+    _sys.path.insert(0, str(_ROOT))
 import asyncio
 import logging
 import pathlib
@@ -44,7 +49,9 @@ async def run_all():
 
     log.info("starting %d robots", len(robots_cfg))
 
-    async with TInvestClient(token) as client:
+    _modes = list(set([r.get("mode", "sandbox") for r in robots_cfg]))
+    _mode = _modes[0] if _modes else "sandbox"
+    async with TInvestClient(token, mode=_mode) as client:
         loops = [RobotLoop(cfg, r, client) for r in robots_cfg]
         tasks = [asyncio.create_task(lp.run(), name="robot-" + str(lp.rid)) for lp in loops]
         try:
