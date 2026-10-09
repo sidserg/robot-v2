@@ -20,7 +20,7 @@ def main():
     print("ticker   days  SMA%    BuyHold%  delta   cand")
     for tk,fg in FIGIS:
         try:
-            candles=load_candles_sync(fg, days=365, timeframe="D1", mode="sandbox")
+            candles=load_candles_sync(fg, days=730, timeframe="D1", mode="sandbox")
         except Exception as e:
             print(tk,"ERR",str(e)[:80]); continue
         if not candles or len(candles)<30:
