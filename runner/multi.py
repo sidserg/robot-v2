@@ -19,11 +19,12 @@ from engine.loop import RobotLoop
 def setup_logging(cfg):
     log_file = cfg.get("log_file", "logs/robot.log")
     pathlib.Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+    from logging.handlers import RotatingFileHandler
     logging.basicConfig(
         level=getattr(logging, cfg.get("log_level", "INFO")),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
+            RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=3, encoding="utf-8"),
             logging.StreamHandler(sys.stdout),
         ],
     )

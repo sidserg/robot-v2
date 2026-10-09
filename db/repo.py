@@ -73,3 +73,37 @@ def count_trades(robot_id: int | None = None) -> int:
             return int(cur.fetchone()["c"])
         finally:
             conn.close()
+
+def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None):
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute("SELECT robot_id FROM robot_state WHERE robot_id=?", (int(robot_id),))
+            row = cur.fetchone()
+            if row is None:
+                conn.execute("INSERT INTO robot_state (robot_id, running, last_ts, day_date, day_equity_start, day_stopped, peak_value, stop_order_id) VALUES (?,?,?,?,?,?,?,?)", (int(robot_id), int(running or 0), last_ts, day_date, float(day_equity_start or 0), int(day_stopped or 0), float(peak_value or 0), stop_order_id))
+            else:
+                fields = []
+                vals = []
+                if running is not None: fields.append("running=?"); vals.append(int(running))
+                if last_ts is not None: fields.append("last_ts=?"); vals.append(last_ts)
+                if day_date is not None: fields.append("day_date=?"); vals.append(day_date)
+                if day_equity_start is not None: fields.append("day_equity_start=?"); vals.append(float(day_equity_start))
+                if day_stopped is not None: fields.append("day_stopped=?"); vals.append(int(day_stopped))
+                if peak_value is not None: fields.append("peak_value=?"); vals.append(float(peak_value))
+                if stop_order_id is not None: fields.append("stop_order_id=?"); vals.append(stop_order_id)
+                if fields:
+                    vals.append(int(robot_id))
+                    conn.execute("UPDATE robot_state SET " + ",".join(fields) + " WHERE robot_id=?", vals)
+        finally:
+            conn.close()
+
+def load_state(robot_id):
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute("SELECT * FROM robot_state WHERE robot_id=?", (int(robot_id),))
+            r = cur.fetchone()
+            return dict(r) if r else None
+        finally:
+            conn.close()

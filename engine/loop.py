@@ -57,6 +57,12 @@ class RobotLoop:
         self.armed = False
         self._tick_count = 0
         self._reconcile_every = int(params.get("reconcile_every", 20))
+        try:
+            _st = repo.load_state(self.rid)
+            if _st:
+                self.stop_order_id = _st.get("stop_order_id") or None
+        except Exception:
+            pass
 
     async def get_candles(self):
         to_dt = datetime.now(timezone.utc)
@@ -96,6 +102,10 @@ class RobotLoop:
             }
             repo.add_trade(rec)
             _nt.notify_trade(rec)
+            try:
+                repo.save_state(self.rid, last_ts=rec["ts"])
+            except Exception:
+                pass
             log.info("[robot-%s] BUY %s x %s = %s", self.rid, self.ticker, qty, round(qty * price, 2))
             return True
         except Exception as e:
@@ -126,9 +136,17 @@ class RobotLoop:
             }
             repo.add_trade(rec)
             _nt.notify_trade(rec)
+            try:
+                repo.save_state(self.rid, last_ts=rec["ts"])
+            except Exception:
+                pass
             log.info("[robot-%s] SELL %s x %s = %s (%s)", self.rid, self.ticker, qty, round(qty * price, 2), reason)
             self.peak_px = 0.0
             self.armed = False
+            try:
+                repo.save_state(self.rid, stop_order_id="")
+            except Exception:
+                pass
             return True
         except Exception as e:
             log.error("[robot-%s] SELL FAILED: %s", self.rid, str(e)[:200])
@@ -185,6 +203,10 @@ class RobotLoop:
                     try:
                         res = await od.post_stop_order(self.c, self.account_id, self.figi, size, round(sp, 2))
                         self.stop_order_id = res.order_id
+                        try:
+                            repo.save_state(self.rid, stop_order_id=self.stop_order_id)
+                        except Exception:
+                            pass
                     except Exception as e:
                         log.warning("[robot-%s] stop fail: %s", self.rid, str(e)[:100])
                     self.peak_px = cur
