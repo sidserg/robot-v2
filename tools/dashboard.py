@@ -38,7 +38,7 @@ th{background:#252932;color:#8892a0;font-weight:normal;font-size:12px}
 .card{background:#1e2229;border-radius:10px;padding:14px 18px;margin-bottom:12px}
 .refresh{color:#4a90d9;cursor:pointer;font-size:13px}
 </style></head><body>
-<h1>RobotV2 <span class="refresh" onclick="location.reload()">обновить</span></h1>
+<h1>RobotV2 <span class="refresh" onclick="location.reload()">обновить</span> <button onclick="doSave()" style="background:#4a90d9;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:14px;margin-left:12px">Сохранить</button> <span id="saveMsg" style="color:#8892a0;font-size:13px;margin-left:8px"></span></h1>
 <div class="info">__TS__</div>
 <h2>Роботы</h2><div id="robots"></div>
 <h2>Позиции</h2><div id="positions"></div>
@@ -78,6 +78,7 @@ function render(d){
   }
   document.getElementById('trades').innerHTML=t;
 }
+function doSave(){var b=event.target;var m=document.getElementById("saveMsg");b.disabled=true;m.textContent="сохранение...";fetch("/api/save",{method:"POST"}).then(function(r){return r.json();}).then(function(d){m.textContent=(d.ok?"OK: ":"Ошибка: ")+(d.msg||"");b.disabled=false;}).catch(function(e){m.textContent="Ошибка сети";b.disabled=false;});}
 fetch('/api/state').then(function(r){return r.json();}).then(render);
 setInterval(function(){fetch('/api/state').then(function(r){return r.json();}).then(render);},15000);
 </script></body></html>
@@ -150,6 +151,28 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(html)))
             self.end_headers()
             self.wfile.write(html)
+            return
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        if self.path == "/api/save":
+            import subprocess, sys
+            try:
+                script = str(ROOT / "tools" / "save_all.py")
+                r = subprocess.run([sys.executable, script, "dashboard: manual save"], cwd=str(ROOT), capture_output=True, text=True, timeout=60)
+                _out = (r.stdout or r.stderr or "").strip()
+                msg = _out.splitlines()[-1] if _out else ""
+                ok = r.returncode == 0
+            except Exception as e:
+                ok = False
+                msg = str(e)[:200]
+            body = json.dumps({"ok": ok, "msg": msg}, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
             return
         self.send_response(404)
         self.end_headers()
