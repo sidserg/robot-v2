@@ -97,6 +97,9 @@ async def reconcile_trades(loop, window_min=60):
         st = (o.get("state", "") or "").upper()
         if st != "OPERATION_STATE_EXECUTED":
             continue
+        _ot = (o.get("operationType", "") or "").upper()
+        if _ot not in ("OPERATION_TYPE_BUY","OPERATION_TYPE_SELL"):
+            continue
         odate = (o.get("date", "") or "")[:16]
         found = False
         for t in my:
