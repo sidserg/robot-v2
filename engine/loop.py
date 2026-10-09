@@ -128,6 +128,17 @@ class RobotLoop:
             if "REJECT" in st or "CANCEL" in st:
                 self._pending_order_id = None
                 return "DEAD"
+            self._pending_ticks = int(getattr(self, "_pending_ticks", 0) or 0) + 1
+            if self._pending_ticks >= 5:
+                try:
+                    await od.cancel_order(self.c, self.account_id, self._pending_order_id)
+                    log.warning("[robot-%s] pending %s timeout, cancelled", self.rid, self._pending_order_id)
+                except Exception:
+                    pass
+                self._pending_order_id = None
+                self._pending_info = None
+                self._pending_ticks = 0
+                return "DEAD"
             return "WAIT"
         except Exception as e:
             log.warning("[robot-%s] pending check failed: %s", self.rid, str(e)[:100])
@@ -155,6 +166,7 @@ class RobotLoop:
             _st = (res.status or "").upper()
             if _ot == "ORDER_TYPE_LIMIT" and "FILL" not in _st:
                 self._pending_order_id = res.order_id
+                self._pending_ticks = 0
                 self._pending_info = {"robot_id": self.rid, "kind": "BUY", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": _px or price, "total": qty * (_px or price), "commission": 0.0, "order_id": res.order_id, "mode": self.mode, "strategy": self.strategy.name}
                 log.info("[robot-%s] limit %s placed (status=%s), waiting next tick", self.rid, res.order_id, _st)
                 return False
@@ -236,6 +248,8 @@ class RobotLoop:
 
     async def tick(self):
         self._tick_count += 1
+        if self._pending_order_id:
+            await self._check_pending()
         try:
             repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         except Exception:
