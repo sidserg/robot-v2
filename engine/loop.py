@@ -74,6 +74,12 @@ class RobotLoop:
             _st = repo.load_state(self.rid)
             if _st:
                 self.stop_order_id = _st.get("stop_order_id") or None
+                _ltt = _st.get("last_tick_ts")
+                if _ltt:
+                    try:
+                        self._last_tick_time = float(_ltt)
+                    except Exception:
+                        pass
                 self._pending_order_id = _st.get("pending_order_id") or None
                 if self._pending_order_id:
                     log.info("[robot-%s] restored pending %s from state", self.rid, self._pending_order_id)
