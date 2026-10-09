@@ -71,3 +71,40 @@ def adx(highs, lows, closes, period=14):
     for dx in dxs[period:]:
         adx_ = (adx_ * (period - 1) + dx) / period
     return float(adx_)
+
+def bollinger(closes, period=20, mult=2.0):
+    if len(closes) < period:
+        return None, None, None
+    window = closes[-period:]
+    mid = sum(window) / period
+    var = sum((x - mid) ** 2 for x in window) / period
+    sd = var ** 0.5
+    return mid - mult * sd, mid, mid + mult * sd
+
+def ema(values, period):
+    if len(values) < period:
+        return None
+    k = 2.0 / (period + 1)
+    e = sum(values[:period]) / period
+    for x in values[period:]:
+        e = x * k + e * (1 - k)
+    return e
+
+def macd(closes, fast=12, slow=26, signal=9):
+    if len(closes) < slow + signal:
+        return None, None, None
+    def _ema_series(vals, p):
+        k = 2.0 / (p + 1)
+        out = []
+        e = sum(vals[:p]) / p
+        out.append(e)
+        for x in vals[p:]:
+            e = x * k + e * (1 - k)
+            out.append(e)
+        return out
+    ef = _ema_series(closes, fast)
+    es = _ema_series(closes, slow)
+    n = min(len(ef), len(es))
+    macd_line = [ef[len(ef)-n+i] - es[len(es)-n+i] for i in range(n)]
+    sig = _ema_series(macd_line, signal)
+    return macd_line[-1], sig[-1], macd_line[-1] - sig[-1]

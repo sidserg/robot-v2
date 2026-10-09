@@ -11,6 +11,9 @@ from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
 from strategies.grid import GridStrategy
+from strategies.rsi import RSIStrategy
+from strategies.bollinger import BollingerStrategy
+from strategies.macd import MACDStrategy
 from notify import desktop as _nt
 from engine.watchdog import Watchdog
 from engine import reconcile as _rec
@@ -30,6 +33,12 @@ def _make_strategy(name, params):
         return SMAStrategy(params)
     if name == "grid":
         return GridStrategy(params)
+    if name == "rsi":
+        return RSIStrategy(params)
+    if name == "bollinger":
+        return BollingerStrategy(params)
+    if name == "macd":
+        return MACDStrategy(params)
     raise ValueError("unknown strategy: " + name)
 
 
