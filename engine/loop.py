@@ -98,6 +98,7 @@ class RobotLoop:
             return True
         except Exception as e:
             log.error("[robot-%s] BUY FAILED: %s", self.rid, str(e)[:200])
+            _nt.notify_error(self.rid, "BUY FAILED: " + str(e)[:100])
             return False
 
     async def do_sell(self, qty, price, reason="signal"):
@@ -129,6 +130,7 @@ class RobotLoop:
             return True
         except Exception as e:
             log.error("[robot-%s] SELL FAILED: %s", self.rid, str(e)[:200])
+            _nt.notify_error(self.rid, "SELL FAILED: " + str(e)[:100])
             return False
 
     async def tick(self):
@@ -203,4 +205,5 @@ class RobotLoop:
                 await self.tick()
             except Exception as e:
                 log.error("[robot-%s] tick error: %s", self.rid, str(e)[:200])
+                _nt.notify_error(self.rid, "tick: " + str(e)[:100])
             await asyncio.sleep(self.check_interval)
