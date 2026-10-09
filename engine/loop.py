@@ -259,6 +259,10 @@ class RobotLoop:
             if "REJECT" in _st:
                 log.error("[robot-%s] SELL REJECTED: %s", self.rid, _st)
                 try:
+                    repo.add_trade({"robot_id": self.rid, "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "kind": "SELL", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": price, "total": qty*price, "commission": 0.0, "order_id": res.order_id, "status": "REJECTED:"+_st, "mode": self.mode, "strategy": self.strategy.name})
+                except Exception:
+                    pass
+                try:
                     _nt.notify_error(self.rid, "SELL rejected")
                 except Exception:
                     pass
