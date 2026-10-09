@@ -78,6 +78,7 @@ class RobotLoop:
 
     async def get_position(self):
         p = await pf.get_portfolio(self.c, self.account_id)
+        self._cash = p.cash_rub
         for pos in p.positions:
             if pos.figi == self.figi:
                 return pos.qty, pos.avg_price, pos.current_price
@@ -229,6 +230,13 @@ class RobotLoop:
                 except Exception:
                     pass
             size = self.strategy.position_size(cur)
+            _cash = getattr(self, "_cash", 0.0)
+            _maxpos = float(self.params.get("max_position_rub", 0))
+            _budget = min(_cash, _maxpos) if _maxpos > 0 else _cash
+            if _budget > 0 and size * cur > _budget:
+                _n = int(_budget / cur)
+                size = float(_n)
+                log.info("[robot-%s] size reduced to %s by budget", self.rid, _n)
             if size > 0:
                 done = await self.do_buy(size, cur)
                 if done:
