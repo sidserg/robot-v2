@@ -339,7 +339,8 @@ class RobotLoop:
             log.warning("[robot-%s] gap detected: %.0fs offline (count=%s), forcing reconcile", self.rid, _gap, self._offline_count)
             self._force_reconcile = True
             try:
-                _nt.notify_error(self.rid, "reconnect after " + str(int(_gap)) + "s x" + str(self._offline_count))
+                _mnt = int(_gap // 60)
+                _nt.notify("[R" + str(self.rid) + "] " + self.ticker, "связь восстановлена, offline " + str(_mnt) + " мин")
             except Exception:
                 pass
             if self._offline_count >= 3:
