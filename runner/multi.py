@@ -82,6 +82,28 @@ async def _pilot_task(stop_ev, log, db_path, log_path):
         except asyncio.TimeoutError:
             pass
 
+async def _heartbeat_task(stop_ev, log, loops):
+    _last = {}
+    while not stop_ev.is_set():
+        try:
+            for lp in loops:
+                _c = int(getattr(lp, "_tick_count", 0) or 0)
+                _prev = _last.get(lp.rid, _c)
+                if _c == _prev and _c > 0:
+                    log.warning("heartbeat: robot-%s frozen at tick %s", lp.rid, _c)
+                    try:
+                        from notify import desktop as _nd
+                        _nd.notify_error(lp.rid, "frozen tick")
+                    except Exception:
+                        pass
+                _last[lp.rid] = _c
+        except Exception as e:
+            log.warning("heartbeat err: %s", str(e)[:100])
+        try:
+            await asyncio.wait_for(stop_ev.wait(), timeout=300)
+        except asyncio.TimeoutError:
+            pass
+
 async def _cross_kill_task(stop_ev, log, cfg, token, mode, loops):
     from broker.client import TInvestClient as _C
     from broker import portfolio as _pf
@@ -164,6 +186,7 @@ async def run_all():
         tasks.append(asyncio.create_task(_watchdog_task(stop_ev, log, log_path), name="watchdog"))
         tasks.append(asyncio.create_task(_pilot_task(stop_ev, log, db_path, log_path), name="pilot"))
         tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
+        tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
         try:
             await asyncio.gather(*tasks)
         except (asyncio.CancelledError, KeyboardInterrupt):
