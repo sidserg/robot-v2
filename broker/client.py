@@ -34,6 +34,14 @@ class TInvestClient:
             await self._client.aclose()
             self._client = None
 
+    async def _reset(self):
+        try:
+            if self._client is not None:
+                await self._client.aclose()
+        except Exception:
+            pass
+        self._client = httpx.AsyncClient(timeout=self.timeout)
+
     def _headers(self):
         return {"Authorization": "Bearer " + self.token, "Content-Type": "application/json"}
     async def call(self, endpoint, body=None, retries=None):
@@ -60,6 +68,13 @@ class TInvestClient:
                 return r.json()
             except Exception as e:
                 last_exc = e
+                _ename = type(e).__name__
+                if _ename in ("ConnectError", "ReadError", "RemoteProtocolError", "ConnectTimeout", "PoolTimeout"):
+                    log.warning("connection error %s, resetting client", _ename)
+                    try:
+                        await self._reset()
+                    except Exception:
+                        pass
                 if attempt < attempts - 1:
                     await asyncio.sleep(2 + attempt * 2)
         raise last_exc if last_exc else RuntimeError("call failed")
