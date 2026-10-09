@@ -67,6 +67,8 @@ class RobotLoop:
         self._last_tick_time = 0.0
         self._force_reconcile = False
         self._offline_count = 0
+        self._last_candle_ts = ""
+        self._stale_candle_count = 0
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -321,6 +323,18 @@ class RobotLoop:
         if len(candles) < 30:
             log.warning("[robot-%s] not enough candles: %s", self.rid, len(candles))
             return
+        _lct = candles[-1].time if candles else ""
+        if _lct and _lct == self._last_candle_ts:
+            self._stale_candle_count += 1
+            if self._stale_candle_count == 3:
+                log.warning("[robot-%s] stale candles: last=%s x%s", self.rid, _lct, self._stale_candle_count)
+                try:
+                    _nt.notify_error(self.rid, "stale candles x" + str(self._stale_candle_count))
+                except Exception:
+                    pass
+        else:
+            self._last_candle_ts = _lct
+            self._stale_candle_count = 0
         qty, avg, cur = await self.get_position()
         _last_close = candles[-1].close
         if cur <= 0:
