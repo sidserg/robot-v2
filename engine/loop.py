@@ -67,6 +67,7 @@ class RobotLoop:
         self._last_tick_time = 0.0
         self._force_reconcile = False
         self._offline_count = 0
+        self._risk_alerted = False
         self._last_candle_ts = ""
         self._stale_candle_count = 0
         try:
@@ -416,6 +417,17 @@ class RobotLoop:
         ok, reason = self.risk.check(equity if equity > 0 else 1.0)
         if not ok:
             log.warning("[robot-%s] risk stop: %s", self.rid, reason)
+            if qty > 0 and avg > 0:
+                try:
+                    await _rec.ensure_stop(self, qty, avg)
+                except Exception as _re:
+                    log.warning("[robot-%s] ensure_stop after risk: %s", self.rid, str(_re)[:100])
+                if not getattr(self, "_risk_alerted", False):
+                    self._risk_alerted = True
+                    try:
+                        _nt.notify_error(self.rid, "risk stop: " + reason + " (position protected by stop)")
+                    except Exception:
+                        pass
             return
 
         if qty > 0 and avg > 0:
