@@ -28,6 +28,7 @@ def setup_logging(cfg):
             logging.StreamHandler(sys.stdout),
         ],
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def read_token(cfg):
