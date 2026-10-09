@@ -55,6 +55,8 @@ class RobotLoop:
         self.stop_order_id = None
         self.peak_px = 0.0
         self.armed = False
+        self._tick_count = 0
+        self._reconcile_every = int(params.get("reconcile_every", 20))
 
     async def get_candles(self):
         to_dt = datetime.now(timezone.utc)
