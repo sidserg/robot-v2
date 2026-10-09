@@ -324,7 +324,16 @@ class RobotLoop:
             log.warning("[robot-%s] not enough candles: %s", self.rid, len(candles))
             return
         _lct = candles[-1].time if candles else ""
-        if _lct and _lct == self._last_candle_ts:
+        _tf_sec = 86400 if self.timeframe == "D1" else 3600
+        _stale_ok = False
+        try:
+            from datetime import datetime as _dt
+            _c_dt = _dt.strptime(_lct.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+            _age = (datetime.now(timezone.utc).replace(tzinfo=None) - _c_dt).total_seconds()
+            _stale_ok = _age > _tf_sec * 2
+        except Exception:
+            _stale_ok = False
+        if _lct and _lct == self._last_candle_ts and _stale_ok:
             self._stale_candle_count += 1
             if self._stale_candle_count == 3:
                 log.warning("[robot-%s] stale candles: last=%s x%s", self.rid, _lct, self._stale_candle_count)
