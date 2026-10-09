@@ -133,7 +133,7 @@ class RobotLoop:
                 if _info:
                     try:
                         rec = dict(_info)
-                        rec["ts"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        rec["ts"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
                         rec["status"] = st
                         repo.add_trade(rec)
                         _nt.notify_trade(rec)
@@ -209,7 +209,7 @@ class RobotLoop:
                 return False
             rec = {
                 "robot_id": self.rid,
-                "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "kind": "BUY",
                 "ticker": self.ticker,
                 "figi": self.figi,
@@ -268,7 +268,7 @@ class RobotLoop:
             if "REJECT" in _st:
                 log.error("[robot-%s] SELL REJECTED: %s", self.rid, _st)
                 try:
-                    repo.add_trade({"robot_id": self.rid, "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "kind": "SELL", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": price, "total": qty*price, "commission": 0.0, "order_id": res.order_id, "status": "REJECTED:"+_st, "mode": self.mode, "strategy": self.strategy.name})
+                    repo.add_trade({"robot_id": self.rid, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "kind": "SELL", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": price, "total": qty*price, "commission": 0.0, "order_id": res.order_id, "status": "REJECTED:"+_st, "mode": self.mode, "strategy": self.strategy.name})
                 except Exception:
                     pass
                 try:
@@ -278,7 +278,7 @@ class RobotLoop:
                 return False
             rec = {
                 "robot_id": self.rid,
-                "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                 "kind": "SELL",
                 "ticker": self.ticker,
                 "figi": self.figi,
@@ -350,7 +350,7 @@ class RobotLoop:
             if _r in ("FILL","FALLBACK","DEAD"):
                 self._pending_result = _r
         try:
-            repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), last_tick_ts=str(_now_ts))
+            repo.save_state(self.rid, running=1, last_ts=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), last_tick_ts=str(_now_ts))
         except Exception:
             pass
         candles = await self.get_candles()
