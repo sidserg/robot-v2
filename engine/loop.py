@@ -66,6 +66,7 @@ class RobotLoop:
         self._pending_result = None
         self._last_tick_time = 0.0
         self._force_reconcile = False
+        self._offline_count = 0
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -267,12 +268,23 @@ class RobotLoop:
         self._last_tick_time = _now_ts
         _gap_limit = max(180.0, self.check_interval * 3.0)
         if _gap > _gap_limit:
-            log.warning("[robot-%s] gap detected: %.0fs offline, forcing reconcile", self.rid, _gap)
+            self._offline_count += 1
+            log.warning("[robot-%s] gap detected: %.0fs offline (count=%s), forcing reconcile", self.rid, _gap, self._offline_count)
             self._force_reconcile = True
             try:
-                _nt.notify_error(self.rid, "reconnect after " + str(int(_gap)) + "s")
+                _nt.notify_error(self.rid, "reconnect after " + str(int(_gap)) + "s x" + str(self._offline_count))
             except Exception:
                 pass
+            if self._offline_count >= 3:
+                log.error("[robot-%s] 3 consecutive gaps, HALT robot", self.rid)
+                try:
+                    _nt.notify_error(self.rid, "HALT: 3 gaps in a row")
+                except Exception:
+                    pass
+                self._stop = True
+                return
+        else:
+            self._offline_count = 0
         if self._pending_order_id:
             _r = await self._check_pending()
             if _r in ("FILL","FALLBACK","DEAD"):
