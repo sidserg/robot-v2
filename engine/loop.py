@@ -100,7 +100,45 @@ class RobotLoop:
         n = int(qty)
         return float(n - (n - int(n / lot) * lot))
 
+    async def _check_pending(self):
+        if not self._pending_order_id:
+            return "NONE"
+        try:
+            r = await od.get_order_state(self.c, self.account_id, self._pending_order_id)
+            st = (r.get("executionReportStatus") or "").upper()
+            log.info("[robot-%s] pending %s = %s", self.rid, self._pending_order_id, st)
+            if "FILL" in st:
+                _info = self._pending_info or {}
+                self._pending_order_id = None
+                self._pending_info = None
+                if _info:
+                    try:
+                        rec = dict(_info)
+                        rec["ts"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        rec["status"] = st
+                        repo.add_trade(rec)
+                        _nt.notify_trade(rec)
+                        log.info("[robot-%s] limit FILL %s x %s = %s", self.rid, self.ticker, _info.get("qty"), _info.get("price"))
+                    except Exception as _e:
+                        log.error("[robot-%s] fill trade save: %s", self.rid, str(_e)[:100])
+                return "FILL"
+            if "REJECT" in st or "CANCEL" in st:
+                self._pending_order_id = None
+                return "DEAD"
+            return "WAIT"
+        except Exception as e:
+            log.warning("[robot-%s] pending check failed: %s", self.rid, str(e)[:100])
+            self._pending_order_id = None
+            return "DEAD"
+
     async def do_buy(self, qty, price):
+        _p = await self._check_pending()
+        if _p == "WAIT":
+            log.info("[robot-%s] pending %s still open, skip", self.rid, self._pending_order_id)
+            return False
+        if _p == "FILL":
+            log.info("[robot-%s] pending FILLed, will place stop next tick", self.rid)
+            return True
         _lot = max(1, int(getattr(self, "lot", 1) or 1))
         qty = self._floor_lot(float(qty), _lot)
         if qty <= 0:
@@ -111,6 +149,12 @@ class RobotLoop:
             _off = float(self.params.get("limit_offset", 0.002))
             _px = round(price * (1 - _off), 2) if _ot == "ORDER_TYPE_LIMIT" else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
+            _st = (res.status or "").upper()
+            if _ot == "ORDER_TYPE_LIMIT" and "FILL" not in _st:
+                self._pending_order_id = res.order_id
+                self._pending_info = {"robot_id": self.rid, "kind": "BUY", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": _px or price, "total": qty * (_px or price), "commission": 0.0, "order_id": res.order_id, "mode": self.mode, "strategy": self.strategy.name}
+                log.info("[robot-%s] limit %s placed (status=%s), waiting next tick", self.rid, res.order_id, _st)
+                return False
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

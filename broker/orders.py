@@ -43,6 +43,15 @@ async def cancel_stop_order(c: TInvestClient, account_id: str, stop_order_id: st
     except Exception:
         return False
 
+async def cancel_order(c: TInvestClient, account_id: str, order_id: str) -> bool:
+    if not order_id:
+        return False
+    try:
+        await c.call("OrdersService/CancelOrder", {"accountId": account_id, "orderId": order_id}, retries=1)
+        return True
+    except Exception:
+        return False
+
 async def get_stop_orders(c: TInvestClient, account_id: str) -> list[dict]:
     r = await c.call("StopOrdersService/GetStopOrders", {"accountId": account_id})
     return r.get("stopOrders", [])
