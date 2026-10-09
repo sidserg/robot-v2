@@ -91,3 +91,46 @@ config.json, broker/ (client.py, models.py), strategies/ (sma.py, grid.py), engi
 
 ### Тесты
 - 37 passed (client, engine, grid, sma, risk, reconcile, lot_budget)
+
+---
+
+## 10. Обновление 2026-10-10
+
+### Стратегии (5 роботов)
+- TATN: SMA 5/20 + trail 3%
+- GAZP: MACD 12/26/9 (+1.8% vs +0.87% SMA на 2г)
+- TATNP: SMA 5/20
+- VTBR: SMA 10/50
+- SIBN: SMA 5/20 + trail 3%
+- Зарегистрированы ещё: RSI, Bollinger
+- Mass-test 7 стратегий x 254 бумаги → MACD лидер на NVTK/ROSN
+
+### Защиты (обновление)
+- Schedule-aware: не торгует при закрытой бирже (MOEX 09:10-18:59, пн-пт)
+- Расписание из API GetTradingSchedules, автоперезагрузка раз в 6ч
+- Preflight GetTradingStatus для real (apiTradeAvailableFlag)
+- Fresh-price guard: отклонение >15% от свечи → берём свечу
+- Velocity breaker: 3% потери за 5 мин → halt (сброс на след. день)
+- Cross-robot kill-switch: 5% общий drop → стоп всех
+- Heartbeat: tick frozen > 5 мин → алерт
+- Stale-candle: > 2x timeframe → алерт
+- Anomaly guard: qty>0 avg=0 → skip
+- Slippage alert: SELL исполнен >1% хуже ожидаемого
+- Pending persistence: лимитник переживает рестарт
+- Limit timeout 3 тика → market fallback
+
+### Инфраструктура
+- 1 процесс: 5 роботов + dashboard + watchdog + pilot + heartbeat + cross-kill + daily report + schedule refresh
+- Watchdog следит за количеством процессов, убивает дубли
+- Уникальный AppUserModelID RobotV2.Notifications (Windows toasts)
+- check_interval=15 сек (было 60)
+- Timestamps в БД в UTC (совместимо с T-Invest)
+- Backup БД раз в сутки через pilot
+
+### Тесты
+- 46 passed (client, engine, grid, sma, risk, reconcile, lot_budget, guards)
+- Live-проверено: gap-detection (312s offline), stop-loss (SIBN +1561 RUB), market fallback
+
+### Известные ограничения
+- WebSocket только для real (sandbox не поддерживает)
+- GetTradingStatus в sandbox возвращает 404 — preflight пропускается
