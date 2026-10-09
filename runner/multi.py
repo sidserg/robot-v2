@@ -44,8 +44,14 @@ async def run_all():
 
     token = read_token(cfg)
     robots_cfg = [r for r in cfg.get("robots", []) if r.get("enabled")]
+    # armed-флаг для real: без явного подтверждения real не запускаем
+    _armed = bool(cfg.get("armed", False))
+    _real = [r for r in robots_cfg if r.get("mode") == "real"]
+    if _real and not _armed:
+        log.error("armed=false, %d real robots blocked. Set armed=true in config.json", len(_real))
+        robots_cfg = [r for r in robots_cfg if r.get("mode") != "real"]
     if not robots_cfg:
-        log.warning("no enabled robots in config.json")
+        log.warning("no enabled robots after armed check")
         return
 
     log.info("starting %d robots", len(robots_cfg))

@@ -43,5 +43,6 @@
   "watchdog": {
     "stall_sec": 240,
     "check_sec": 60
-  }
+  },
+  "armed": false
 }
