@@ -82,6 +82,56 @@ async def _pilot_task(stop_ev, log, db_path, log_path):
         except asyncio.TimeoutError:
             pass
 
+async def _cross_kill_task(stop_ev, log, cfg, token, mode, loops):
+    from broker.client import TInvestClient as _C
+    from broker import portfolio as _pf
+    _window = 300
+    _limit = float(cfg.get("cross_kill_pct", 0.05))
+    _peak = 0.0
+    _hist = []
+    while not stop_ev.is_set():
+        try:
+            _tot = 0.0
+            async with _C(token, mode=mode) as _cl:
+                _seen = set()
+                for lp in loops:
+                    if lp.account_id in _seen:
+                        continue
+                    _seen.add(lp.account_id)
+                    try:
+                        p = await _pf.get_portfolio(_cl, lp.account_id)
+                        _tot += float(p.total_value or 0)
+                    except Exception:
+                        pass
+            if _tot > 0:
+                _now = time.time()
+                _hist.append((_now, _tot))
+                _hist[:] = [(t,v) for t,v in _hist if _now - t <= _window]
+                if _tot > _peak:
+                    _peak = _tot
+                if _peak > 0 and _limit > 0:
+                    _drop = (_peak - _tot) / _peak
+                    if _drop >= _limit:
+                        log.error("CROSS-KILL: total equity drop %.2f%% > %.2f%%, halting all robots", _drop*100, _limit*100)
+                        try:
+                            from notify import desktop as _nd
+                            _nd.notify_error(0, "CROSS-KILL %.2f%%" % (_drop*100))
+                        except Exception:
+                            pass
+                        for lp in loops:
+                            try:
+                                lp.stop()
+                            except Exception:
+                                pass
+                        stop_ev.set()
+                        return
+        except Exception as e:
+            log.warning("cross-kill err: %s", str(e)[:100])
+        try:
+            await asyncio.wait_for(stop_ev.wait(), timeout=60)
+        except asyncio.TimeoutError:
+            pass
+
 async def run_all():
     cfg = loader.load()
     setup_logging(cfg)
@@ -113,6 +163,7 @@ async def run_all():
         tasks = [asyncio.create_task(lp.run(), name="robot-" + str(lp.rid)) for lp in loops]
         tasks.append(asyncio.create_task(_watchdog_task(stop_ev, log, log_path), name="watchdog"))
         tasks.append(asyncio.create_task(_pilot_task(stop_ev, log, db_path, log_path), name="pilot"))
+        tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
         try:
             await asyncio.gather(*tasks)
         except (asyncio.CancelledError, KeyboardInterrupt):
