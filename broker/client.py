@@ -3,6 +3,7 @@
 from __future__ import annotations
 import asyncio
 import logging
+import time
 from typing import Any, Optional
 import httpx
 from config import loader
@@ -22,6 +23,8 @@ class TInvestClient:
         self.timeout = float(timeout or ti.get("timeout_sec", 30))
         self.retries = int(retries or ti.get("retries", 3))
         self._client = None
+        self.rate_limit = int(ti.get("rate_limit_per_min", 200))
+        self._last_call = None
     async def __aenter__(self):
         self._client = httpx.AsyncClient(timeout=self.timeout)
         return self
@@ -42,7 +45,15 @@ class TInvestClient:
         last_exc = None
         for attempt in range(attempts):
             try:
+                await self._rate_wait()
                 r = await self._client.post(url, json=body, headers=self._headers())
+                if r.status_code == 429:
+                    ra = r.headers.get("Retry-After", "5")
+                    try: ra = int(ra)
+                    except Exception: ra = 5
+                    log.warning("429 rate limit, sleep %ss", ra)
+                    await asyncio.sleep(ra)
+                    continue
                 if r.status_code >= 400:
                     log.error("HTTP %s %s", r.status_code, endpoint)
                     r.raise_for_status()
@@ -50,5 +61,16 @@ class TInvestClient:
             except Exception as e:
                 last_exc = e
                 if attempt < attempts - 1:
-                    await asyncio.sleep(1 + attempt)
+                    await asyncio.sleep(2 + attempt * 2)
         raise last_exc if last_exc else RuntimeError("call failed")
+
+    async def _rate_wait(self):
+        # Простой rate-limit: не более rate_limit_per_min запросов в минуту
+        if self._last_call is None:
+            self._last_call = time.monotonic()
+            return
+        min_gap = 60.0 / max(1, self.rate_limit)
+        elapsed = time.monotonic() - self._last_call
+        if elapsed < min_gap:
+            await asyncio.sleep(min_gap - elapsed)
+        self._last_call = time.monotonic()

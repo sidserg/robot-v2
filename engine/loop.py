@@ -9,8 +9,10 @@ from broker import orders as od
 from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
+from strategies.grid import GridStrategy
 from notify import desktop as _nt
 from engine.watchdog import Watchdog
+from engine import reconcile as _rec
 
 log = logging.getLogger("engine.loop")
 
@@ -25,6 +27,8 @@ INTERVAL_MAP = {
 def _make_strategy(name, params):
     if name == "sma":
         return SMAStrategy(params)
+    if name == "grid":
+        return GridStrategy(params)
     raise ValueError("unknown strategy: " + name)
 
 
@@ -128,6 +132,7 @@ class RobotLoop:
             return False
 
     async def tick(self):
+        self._tick_count += 1
         candles = await self.get_candles()
         if len(candles) < 30:
             log.warning("[robot-%s] not enough candles: %s", self.rid, len(candles))
@@ -135,6 +140,12 @@ class RobotLoop:
         qty, avg, cur = await self.get_position()
         if cur <= 0:
             cur = candles[-1].close
+        # periodic reconcile
+        if qty > 0 and avg > 0 and self._reconcile_every > 0 and self._tick_count % self._reconcile_every == 0:
+            try:
+                await _rec.ensure_stop(self, qty, avg)
+            except Exception as _e:
+                log.warning("[robot-%s] reconcile: %s", self.rid, str(_e)[:120])
         equity = qty * cur
         ok, reason = self.risk.check(equity if equity > 0 else 1.0)
         if not ok:
@@ -181,6 +192,12 @@ class RobotLoop:
 
     async def run(self):
         log.info("[robot-%s] start %s %s interval=%ss", self.rid, self.strategy.name, self.ticker, self.check_interval)
+        try:
+            _q, _a, _c = await self.get_position()
+            if _q > 0 and _a > 0:
+                await _rec.ensure_stop(self, _q, _a)
+        except Exception as _e:
+            log.warning("[robot-%s] startup reconcile: %s", self.rid, str(_e)[:120])
         while True:
             try:
                 await self.tick()
