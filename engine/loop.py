@@ -199,6 +199,15 @@ class RobotLoop:
 
         sig = self.strategy.signal(candles, qty, avg)
         if sig.action == "BUY" and qty <= 0:
+            _max_spread = float(self.params.get("max_spread_percent", 0.5))
+            if _max_spread > 0:
+                try:
+                    _sp = await pf.get_spread_pct(self.c, self.figi)
+                    if _sp >= 0 and _sp > _max_spread:
+                        log.warning("[robot-%s] spread %.2f%%  skip", self.rid, _sp, _max_spread)
+                        return
+                except Exception:
+                    pass
             size = self.strategy.position_size(cur)
             if size > 0:
                 done = await self.do_buy(size, cur)
