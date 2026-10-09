@@ -10,20 +10,20 @@ def test_no_limits_ok():
     assert ok
 
 def test_daily_loss_stop():
-    r = RiskManager({"daily_loss_limit": 0.05})
+    r = RiskManager({"daily_loss_limit": 0.05, "velocity_limit": 0})
     r.check(100000.0)
     ok, reason = r.check(94000.0)
     assert not ok
     assert "daily" in reason
 
 def test_daily_loss_within_limit():
-    r = RiskManager({"daily_loss_limit": 0.05})
+    r = RiskManager({"daily_loss_limit": 0.05, "velocity_limit": 0})
     r.check(100000.0)
     ok, _ = r.check(97000.0)
     assert ok
 
 def test_max_drawdown_stop():
-    r = RiskManager({"max_drawdown": 0.20})
+    r = RiskManager({"max_drawdown": 0.20, "velocity_limit": 0})
     r.check(100000.0)
     r.check(120000.0)
     ok, reason = r.check(90000.0)
@@ -31,7 +31,7 @@ def test_max_drawdown_stop():
     assert "drawdown" in reason
 
 def test_stopped_stays_stopped():
-    r = RiskManager({"max_drawdown": 0.10})
+    r = RiskManager({"max_drawdown": 0.10, "velocity_limit": 0})
     r.check(100000.0)
     r.check(50000.0)
     ok, _ = r.check(100000.0)
