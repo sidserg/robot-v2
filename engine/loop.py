@@ -71,6 +71,9 @@ class RobotLoop:
             _st = repo.load_state(self.rid)
             if _st:
                 self.stop_order_id = _st.get("stop_order_id") or None
+                self._pending_order_id = _st.get("pending_order_id") or None
+                if self._pending_order_id:
+                    log.info("[robot-%s] restored pending %s from state", self.rid, self._pending_order_id)
         except Exception:
             pass
 
@@ -121,6 +124,10 @@ class RobotLoop:
                 _info = self._pending_info or {}
                 self._pending_order_id = None
                 self._pending_info = None
+                try:
+                    repo.save_state(self.rid, pending_order_id="")
+                except Exception:
+                    pass
                 if _info:
                     try:
                         rec = dict(_info)
@@ -134,6 +141,10 @@ class RobotLoop:
                 return "FILL"
             if "REJECT" in st or "CANCEL" in st:
                 self._pending_order_id = None
+                try:
+                    repo.save_state(self.rid, pending_order_id="")
+                except Exception:
+                    pass
                 return "DEAD"
             self._pending_ticks = int(getattr(self, "_pending_ticks", 0) or 0) + 1
             if self._pending_ticks >= 3:
@@ -180,6 +191,10 @@ class RobotLoop:
             if _ot == "ORDER_TYPE_LIMIT" and "FILL" not in _st:
                 self._pending_order_id = res.order_id
                 self._pending_ticks = 0
+                try:
+                    repo.save_state(self.rid, pending_order_id=res.order_id)
+                except Exception:
+                    pass
                 self._pending_info = {"robot_id": self.rid, "kind": "BUY", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": _px or price, "total": qty * (_px or price), "commission": 0.0, "order_id": res.order_id, "mode": self.mode, "strategy": self.strategy.name}
                 log.info("[robot-%s] limit %s placed (status=%s), waiting next tick", self.rid, res.order_id, _st)
                 return False

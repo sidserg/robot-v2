@@ -25,6 +25,13 @@ def m2_last_tick_ts(conn):
     except Exception:
         pass
 
+@migration(3)
+def m3_pending_order_id(conn):
+    try:
+        conn.execute("ALTER TABLE robot_state ADD COLUMN pending_order_id TEXT")
+    except Exception:
+        pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")
