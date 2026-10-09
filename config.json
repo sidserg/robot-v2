@@ -24,7 +24,7 @@
         "signal_mode": "slope",
         "stop_loss": 0.05,
         "take_profit": 0.15,
-        "trail_pct": 0.0,
+        "trail_pct": 0.03,
         "qty_limit": 100,
         "max_position_rub": 100000,
         "daily_loss_limit": 0.05,
