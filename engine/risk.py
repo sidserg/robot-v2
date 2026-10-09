@@ -15,14 +15,22 @@ class RiskManager:
         self.day_stopped = False
         self.peak_value = 0.0
         self.stopped = False
+        self.stopped_reason = ""
+        self.stopped_date = None
         self.velocity_pct = float(p.get("velocity_limit", 0.03))
         self.velocity_window = int(p.get("velocity_window_sec", 300))
         self._eq_hist = collections.deque(maxlen=64)
 
     def check(self, equity: float) -> tuple[bool, str]:
-        if self.stopped:
-            return False, "stopped"
         today = datetime.now(timezone.utc).date()
+        if self.stopped:
+            _is_vel = "velocity" in (self.stopped_reason or "")
+            if _is_vel and self.stopped_date != today:
+                self.stopped = False
+                self.stopped_reason = ""
+                self._eq_hist.clear()
+            else:
+                return False, self.stopped_reason or "stopped"
         if self.day_date != today:
             self.day_date = today
             self.day_equity_start = equity
@@ -44,12 +52,15 @@ class RiskManager:
                 _drop = (_base - equity) / _base
                 if _drop >= self.velocity_pct:
                     self.stopped = True
-                    return False, "velocity drop {:.2%} in {}s".format(_drop, self.velocity_window)
+                    self.stopped_reason = "velocity drop {:.2%} in {}s".format(_drop, self.velocity_window)
+                    self.stopped_date = today
+                    return False, self.stopped_reason
         if equity > self.peak_value:
             self.peak_value = equity
         if self.max_dd > 0 and self.peak_value > 0:
             dd = (self.peak_value - equity) / self.peak_value
             if dd >= self.max_dd:
                 self.stopped = True
-                return False, "max drawdown {:.2%}".format(dd)
+                self.stopped_reason = "max drawdown {:.2%}".format(dd)
+                return False, self.stopped_reason
         return True, "ok"

@@ -238,10 +238,17 @@ class RobotLoop:
             if self.stop_order_id:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
-            _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
-            _off = float(self.params.get("limit_offset", 0.002))
-            _px = round(price * (1 + _off), 2) if _ot == "ORDER_TYPE_LIMIT" else None
+            _ot = "ORDER_TYPE_MARKET"
+            _px = None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
+            _st = (res.status or "").upper()
+            if "REJECT" in _st:
+                log.error("[robot-%s] SELL REJECTED: %s", self.rid, _st)
+                try:
+                    _nt.notify_error(self.rid, "SELL rejected")
+                except Exception:
+                    pass
+                return False
             rec = {
                 "robot_id": self.rid,
                 "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
