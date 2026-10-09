@@ -333,6 +333,13 @@ class RobotLoop:
                 await _rec.reconcile_trades(self, window_min=60)
             except Exception as _e:
                 log.warning("[robot-%s] reconcile: %s", self.rid, str(_e)[:120])
+        if qty > 0 and avg <= 0:
+            log.error("[robot-%s] anomaly: qty=%s but avg=0, skip trade", self.rid, qty)
+            try:
+                _nt.notify_error(self.rid, "anomaly: qty>0 avg=0")
+            except Exception:
+                pass
+            return
         equity = qty * cur
         ok, reason = self.risk.check(equity if equity > 0 else 1.0)
         if not ok:
