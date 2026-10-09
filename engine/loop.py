@@ -129,16 +129,15 @@ class RobotLoop:
                 self._pending_order_id = None
                 return "DEAD"
             self._pending_ticks = int(getattr(self, "_pending_ticks", 0) or 0) + 1
-            if self._pending_ticks >= 5:
+            if self._pending_ticks >= 3:
                 try:
                     await od.cancel_order(self.c, self.account_id, self._pending_order_id)
-                    log.warning("[robot-%s] pending %s timeout, cancelled", self.rid, self._pending_order_id)
+                    log.warning("[robot-%s] pending %s timeout (3 ticks), cancel -> fallback market", self.rid, self._pending_order_id)
                 except Exception:
                     pass
                 self._pending_order_id = None
-                self._pending_info = None
                 self._pending_ticks = 0
-                return "DEAD"
+                return "FALLBACK"
             return "WAIT"
         except Exception as e:
             log.warning("[robot-%s] pending check failed: %s", self.rid, str(e)[:100])
@@ -153,15 +152,19 @@ class RobotLoop:
         if _p == "FILL":
             log.info("[robot-%s] pending FILLed, will place stop next tick", self.rid)
             return True
+        _force_market = (_p == "FALLBACK")
+        if _force_market:
+            log.warning("[robot-%s] limit timeout, force market BUY", self.rid)
         _lot = max(1, int(getattr(self, "lot", 1) or 1))
         qty = self._floor_lot(float(qty), _lot)
         if qty <= 0:
             log.warning("[robot-%s] qty below lot, skip buy", self.rid)
             return False
         try:
-            _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
+            _use_lim = bool(self.params.get("use_limit", False)) and not _force_market
+            _ot = "ORDER_TYPE_LIMIT" if _use_lim else "ORDER_TYPE_MARKET"
             _off = float(self.params.get("limit_offset", 0.002))
-            _px = round(price * (1 - _off), 2) if _ot == "ORDER_TYPE_LIMIT" else None
+            _px = round(price * (1 - _off), 2) if _use_lim else None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_BUY", order_type=_ot, price=_px)
             _st = (res.status or "").upper()
             if _ot == "ORDER_TYPE_LIMIT" and "FILL" not in _st:
