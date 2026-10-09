@@ -58,6 +58,7 @@ class RobotLoop:
         self._tick_count = 0
         self._reconcile_every = int(params.get("reconcile_every", 20))
         self.lot = 1
+        self._stop = False
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -83,6 +84,17 @@ class RobotLoop:
             if pos.figi == self.figi:
                 return pos.qty, pos.avg_price, pos.current_price
         return 0.0, 0.0, 0.0
+
+    def stop(self):
+        self._stop = True
+
+    async def _sleep(self, seconds):
+        _end = asyncio.get_event_loop().time() + float(seconds)
+        while not self._stop:
+            _left = _end - asyncio.get_event_loop().time()
+            if _left <= 0:
+                break
+            await asyncio.sleep(min(1.0, _left))
 
     def _floor_lot(self, qty, lot):
         n = int(qty)
@@ -273,10 +285,10 @@ class RobotLoop:
                 await _rec.ensure_stop(self, _q, _a)
         except Exception as _e:
             log.warning("[robot-%s] startup reconcile: %s", self.rid, str(_e)[:120])
-        while True:
+        while not self._stop:
             try:
                 await self.tick()
             except Exception as e:
                 log.error("[robot-%s] tick error: %s", self.rid, str(e)[:200])
                 _nt.notify_error(self.rid, "tick: " + str(e)[:100])
-            await asyncio.sleep(self.check_interval)
+            await self._sleep(self.check_interval)

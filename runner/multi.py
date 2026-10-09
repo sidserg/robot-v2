@@ -70,10 +70,19 @@ async def run_all():
         tasks = [asyncio.create_task(lp.run(), name="robot-" + str(lp.rid)) for lp in loops]
         try:
             await asyncio.gather(*tasks)
-        except asyncio.CancelledError:
-            log.info("cancelled, stopping robots")
-            for t in tasks:
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            log.info("shutdown: stopping %d robots", len(loops))
+            for lp in loops:
+                try:
+                    lp.stop()
+                except Exception:
+                    pass
+            _done, _pending = await asyncio.wait(tasks, timeout=10)
+            for t in _pending:
                 t.cancel()
+            if _pending:
+                await asyncio.gather(*_pending, return_exceptions=True)
+            log.info("shutdown: done")
 
 
 def main():
