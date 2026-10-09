@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """risk.py - risk management."""
 from __future__ import annotations
+import collections
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,6 +15,9 @@ class RiskManager:
         self.day_stopped = False
         self.peak_value = 0.0
         self.stopped = False
+        self.velocity_pct = float(p.get("velocity_limit", 0.03))
+        self.velocity_window = int(p.get("velocity_window_sec", 300))
+        self._eq_hist = collections.deque(maxlen=64)
 
     def check(self, equity: float) -> tuple[bool, str]:
         if self.stopped:
@@ -30,6 +34,17 @@ class RiskManager:
                 return False, "daily limit {:.2%}".format(dl)
         if self.day_stopped:
             return False, "daily stopped"
+        _now = datetime.now(timezone.utc).timestamp()
+        self._eq_hist.append((_now, equity))
+        while self._eq_hist and _now - self._eq_hist[0][0] > self.velocity_window:
+            self._eq_hist.popleft()
+        if self.velocity_pct > 0 and len(self._eq_hist) >= 2:
+            _base = self._eq_hist[0][1]
+            if _base > 0:
+                _drop = (_base - equity) / _base
+                if _drop >= self.velocity_pct:
+                    self.stopped = True
+                    return False, "velocity drop {:.2%} in {}s".format(_drop, self.velocity_window)
         if equity > self.peak_value:
             self.peak_value = equity
         if self.max_dd > 0 and self.peak_value > 0:
