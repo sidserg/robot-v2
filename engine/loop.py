@@ -428,15 +428,23 @@ class RobotLoop:
                 done = await self.do_buy(size, cur)
                 if done:
                     sp = cur * (1 - self.stop_loss)
-                    try:
-                        res = await od.post_stop_order(self.c, self.account_id, self.figi, size, round(sp, 2))
-                        self.stop_order_id = res.order_id
+                    _sp_chk = round(sp, 2)
+                    if _sp_chk <= 0 or _sp_chk >= cur * 0.99 or _sp_chk < cur * 0.5:
+                        log.error("[robot-%s] stop price suspicious: sp=%s cur=%s, skip", self.rid, _sp_chk, cur)
                         try:
-                            repo.save_state(self.rid, stop_order_id=self.stop_order_id)
+                            _nt.notify_error(self.rid, "bad stop price " + str(_sp_chk))
                         except Exception:
                             pass
-                    except Exception as e:
-                        log.warning("[robot-%s] stop fail: %s", self.rid, str(e)[:100])
+                    else:
+                        try:
+                            res = await od.post_stop_order(self.c, self.account_id, self.figi, size, _sp_chk)
+                            self.stop_order_id = res.order_id
+                            try:
+                                repo.save_state(self.rid, stop_order_id=self.stop_order_id)
+                            except Exception:
+                                pass
+                        except Exception as e:
+                            log.warning("[robot-%s] stop fail: %s", self.rid, str(e)[:100])
                     self.peak_px = cur
                     self.armed = False
         elif sig.action == "SELL" and qty > 0:
