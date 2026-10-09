@@ -36,3 +36,10 @@ def test_stopped_stays_stopped():
     r.check(50000.0)
     ok, _ = r.check(100000.0)
     assert not ok
+
+def test_velocity_breaker():
+    r = RiskManager({"velocity_limit": 0.03, "velocity_window_sec": 300})
+    r.check(100000.0)
+    ok, reason = r.check(96000.0)
+    assert not ok
+    assert "velocity" in reason
