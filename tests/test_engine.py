@@ -12,6 +12,11 @@ from broker.models import Candle, Position, Portfolio, OrderResult, Signal
 from engine.loop import RobotLoop
 from engine.risk import RiskManager
 
+@pytest.fixture(autouse=True)
+def _force_trading():
+    with patch("engine.loop._sch.is_trading_now", return_value=(True, "test")):
+        yield
+
 
 def _cfg():
     return {
