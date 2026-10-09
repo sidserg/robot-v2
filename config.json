@@ -16,7 +16,7 @@
       "mode": "sandbox",
       "figi": "BBG004RVFFC0",
       "ticker": "TATN",
-      "account_id": "2df95f32-0a79-458f-838b-f630c2b5dbde",
+      "account_id": "0f116a69-b397-4bfb-9b61-0c42b5705be2",
       "strategy": "sma",
       "params": {
         "fast": 5,
