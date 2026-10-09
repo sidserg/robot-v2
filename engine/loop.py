@@ -63,6 +63,8 @@ class RobotLoop:
         self._pending_ticks = 0
         self._pending_info = None
         self._pending_result = None
+        self._last_tick_time = 0.0
+        self._force_reconcile = False
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -257,12 +259,25 @@ class RobotLoop:
 
     async def tick(self):
         self._tick_count += 1
+        _now_ts = time.time()
+        _gap = 0.0
+        if self._last_tick_time > 0:
+            _gap = _now_ts - self._last_tick_time
+        self._last_tick_time = _now_ts
+        _gap_limit = max(180.0, self.check_interval * 3.0)
+        if _gap > _gap_limit:
+            log.warning("[robot-%s] gap detected: %.0fs offline, forcing reconcile", self.rid, _gap)
+            self._force_reconcile = True
+            try:
+                _nt.notify_error(self.rid, "reconnect after " + str(int(_gap)) + "s")
+            except Exception:
+                pass
         if self._pending_order_id:
             _r = await self._check_pending()
             if _r in ("FILL","FALLBACK","DEAD"):
                 self._pending_result = _r
         try:
-            repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), last_tick_ts=str(_now_ts))
         except Exception:
             pass
         candles = await self.get_candles()
@@ -273,7 +288,18 @@ class RobotLoop:
         if cur <= 0:
             cur = candles[-1].close
         # periodic reconcile
-        if qty > 0 and avg > 0 and self._reconcile_every > 0 and self._tick_count % self._reconcile_every == 0:
+        if self._force_reconcile and qty <= 0 and self.stop_order_id:
+            log.info("[robot-%s] after gap: position closed, clearing stop %s", self.rid, self.stop_order_id)
+            self.stop_order_id = None
+            try:
+                repo.save_state(self.rid, stop_order_id="")
+            except Exception:
+                pass
+        _do_reconcile = (qty > 0 and avg > 0 and self._reconcile_every > 0 and self._tick_count % self._reconcile_every == 0)
+        if self._force_reconcile:
+            _do_reconcile = True
+            self._force_reconcile = False
+        if _do_reconcile:
             try:
                 await _rec.ensure_stop(self, qty, avg)
                 await _rec.reconcile_trades(self, window_min=60)

@@ -18,6 +18,13 @@ def migration(version):
 def m1_initial(conn):
     pass  # базовая схема уже создана через schema.sql
 
+@migration(2)
+def m2_last_tick_ts(conn):
+    try:
+        conn.execute("ALTER TABLE robot_state ADD COLUMN last_tick_ts TEXT")
+    except Exception:
+        pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")
