@@ -155,6 +155,10 @@ class RobotLoop:
 
     async def tick(self):
         self._tick_count += 1
+        try:
+            repo.save_state(self.rid, running=1, last_ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        except Exception:
+            pass
         candles = await self.get_candles()
         if len(candles) < 30:
             log.warning("[robot-%s] not enough candles: %s", self.rid, len(candles))

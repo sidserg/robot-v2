@@ -15,8 +15,13 @@ _DB_PATH = None
 def db_path() -> pathlib.Path:
     global _DB_PATH
     if _DB_PATH is None:
-        cfg = loader.load()
-        _DB_PATH = _ROOT / cfg.get("db_path", "data/robot.db")
+        import os
+        _env = os.environ.get("ROBOTV2_DB")
+        if _env:
+            _DB_PATH = pathlib.Path(_env)
+        else:
+            cfg = loader.load()
+            _DB_PATH = _ROOT / cfg.get("db_path", "data/robot.db")
     return _DB_PATH
 
 def _connect() -> sqlite3.Connection:
@@ -105,5 +110,23 @@ def load_state(robot_id):
             cur = conn.execute("SELECT * FROM robot_state WHERE robot_id=?", (int(robot_id),))
             r = cur.fetchone()
             return dict(r) if r else None
+        finally:
+            conn.close()
+
+def list_states():
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute("SELECT * FROM robot_state ORDER BY robot_id")
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            conn.close()
+
+def summary():
+    with _lock:
+        conn = _connect()
+        try:
+            cur = conn.execute("SELECT robot_id, COUNT(*) AS n FROM trades GROUP BY robot_id")
+            return [dict(r) for r in cur.fetchall()]
         finally:
             conn.close()
