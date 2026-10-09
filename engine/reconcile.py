@@ -28,3 +28,30 @@ async def ensure_stop(loop, size, avg):
         log.info("[robot-%s] stop re-placed @ %s qty=%s", loop.rid, round(sp, 2), size)
     except Exception as e:
         log.error("[robot-%s] stop place failed: %s", loop.rid, str(e)[:120])
+
+async def reconcile_trades(loop, window_min=60):
+    """Сверяем operations T-Invest за окно с trades в БД. Возвращает число missing."""
+    from datetime import datetime, timezone, timedelta
+    from db import repo
+    try:
+        to_dt = datetime.now(timezone.utc)
+        fr_dt = to_dt - timedelta(minutes=int(window_min))
+        ops = await pf.get_operations(loop.c, loop.account_id, fr_dt.strftime("%Y-%m-%dT%H:%M:%SZ"), to_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    except Exception as e:
+        log.warning("[robot-%s] reconcile ops failed: %s", loop.rid, str(e)[:120])
+        return 0
+    my = repo.get_trades(limit=200, robot_id=loop.rid)
+    my_oids = {t.get("order_id", "") for t in my if t.get("order_id")}
+    missing = []
+    for o in ops:
+        if o.get("figi") != loop.figi:
+            continue
+        st = (o.get("state", "") or "").upper()
+        if st != "OPERATION_STATE_EXECUTED":
+            continue
+        oid = o.get("parentOperationId") or o.get("id") or ""
+        if oid and oid not in my_oids:
+            missing.append(o)
+    if missing:
+        log.warning("[robot-%s] T-Invest sees %s ops not in DB", loop.rid, len(missing))
+    return len(missing)

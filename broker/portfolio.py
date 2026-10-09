@@ -46,3 +46,7 @@ async def get_last_price(c: TInvestClient, figi: str) -> float:
 async def get_instrument(c: TInvestClient, figi: str) -> dict:
     r = await c.call("InstrumentsService/GetInstrumentBy", {"idType": "INSTRUMENT_ID_TYPE_FIGI", "id": figi})
     return r.get("instrument", {})
+
+async def get_operations(c: TInvestClient, account_id: str, from_i: str, to_i: str) -> list[dict]:
+    r = await c.call("OperationsService/GetOperations", {"accountId": account_id, "from": from_i, "to": to_i})
+    return r.get("operations", [])

@@ -170,6 +170,7 @@ class RobotLoop:
         if qty > 0 and avg > 0 and self._reconcile_every > 0 and self._tick_count % self._reconcile_every == 0:
             try:
                 await _rec.ensure_stop(self, qty, avg)
+                await _rec.reconcile_trades(self, window_min=60)
             except Exception as _e:
                 log.warning("[robot-%s] reconcile: %s", self.rid, str(_e)[:120])
         equity = qty * cur
