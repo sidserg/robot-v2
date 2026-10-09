@@ -238,6 +238,13 @@ class RobotLoop:
     async def run(self):
         log.info("[robot-%s] start %s %s interval=%ss", self.rid, self.strategy.name, self.ticker, self.check_interval)
         try:
+            _instr = await pf.get_instrument(self.c, self.figi)
+            _it = _instr.get("instrumentType", "")
+            if _it not in ("share", "etf", "bond", "currency"):
+                log.warning("[robot-%s] unknown instrument type: %s", self.rid, _it)
+        except Exception as _e:
+            log.warning("[robot-%s] instrument check: %s", self.rid, str(_e)[:120])
+        try:
             _q, _a, _c = await self.get_position()
             if _q > 0 and _a > 0:
                 await _rec.ensure_stop(self, _q, _a)

@@ -39,6 +39,8 @@ def init_db() -> None:
         conn = _connect()
         try:
             conn.executescript(schema)
+            from db import migrations
+            migrations.apply_all(conn)
         finally:
             conn.close()
 
