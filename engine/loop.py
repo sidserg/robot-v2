@@ -512,6 +512,12 @@ class RobotLoop:
                     pass
             size = self.strategy.position_size(cur)
             _cash = getattr(self, "_cash", 0.0)
+            _risk_pct = float(self.params.get("risk_per_trade_pct", 0.0))
+            if _risk_pct > 0 and _cash > 0:
+                _risk_size = int((_cash * _risk_pct) / cur) if cur > 0 else 0
+                if _risk_size > 0 and _risk_size < size:
+                    log.info("[robot-%s] risk sizing: %s -> %s ("+str(int(_risk_pct*100))+"% of cash)", self.rid, int(size), _risk_size)
+                    size = float(_risk_size)
             _maxpos = float(self.params.get("max_position_rub", 0))
             _budget = min(_cash, _maxpos) if _maxpos > 0 else _cash
             if _budget > 0 and size * cur > _budget:
