@@ -57,6 +57,7 @@ class RobotLoop:
         self.armed = False
         self._tick_count = 0
         self._reconcile_every = int(params.get("reconcile_every", 20))
+        self.lot = 1
         try:
             _st = repo.load_state(self.rid)
             if _st:
@@ -82,7 +83,16 @@ class RobotLoop:
                 return pos.qty, pos.avg_price, pos.current_price
         return 0.0, 0.0, 0.0
 
+    def _floor_lot(self, qty, lot):
+        n = int(qty)
+        return float(n - (n - int(n / lot) * lot))
+
     async def do_buy(self, qty, price):
+        _lot = max(1, int(getattr(self, "lot", 1) or 1))
+        qty = self._floor_lot(float(qty), _lot)
+        if qty <= 0:
+            log.warning("[robot-%s] qty below lot, skip buy", self.rid)
+            return False
         try:
             _ot = "ORDER_TYPE_LIMIT" if self.params.get("use_limit", False) else "ORDER_TYPE_MARKET"
             _px = price if _ot == "ORDER_TYPE_LIMIT" else None
@@ -244,6 +254,7 @@ class RobotLoop:
         try:
             _instr = await pf.get_instrument(self.c, self.figi)
             _it = _instr.get("instrumentType", "")
+            self.lot = int(_instr.get("lot", 1) or 1)
             if _it not in ("share", "etf", "bond", "currency"):
                 log.warning("[robot-%s] unknown instrument type: %s", self.rid, _it)
         except Exception as _e:
