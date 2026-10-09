@@ -9,6 +9,8 @@ from broker import orders as od
 from db import repo
 from engine.risk import RiskManager
 from strategies.sma import SMAStrategy
+from notify import desktop as _nt
+from engine.watchdog import Watchdog
 
 log = logging.getLogger("engine.loop")
 
