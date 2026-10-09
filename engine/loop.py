@@ -603,6 +603,14 @@ class RobotLoop:
             try:
                 await self.tick()
             except Exception as e:
+                if getattr(self.c, "auth_failed", False):
+                    log.error("[robot-%s] AUTH FAILED, halting robot", self.rid)
+                    try:
+                        _nt.notify_error(self.rid, "TOKEN EXPIRED, halt")
+                    except Exception:
+                        pass
+                    self._stop = True
+                    return
                 log.error("[robot-%s] tick error: %s", self.rid, str(e)[:200])
                 _nt.notify_error(self.rid, "tick: " + str(e)[:100])
             await self._sleep(self.check_interval)

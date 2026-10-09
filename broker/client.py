@@ -23,6 +23,7 @@ class TInvestClient:
         self.timeout = float(timeout or ti.get("timeout_sec", 30))
         self.retries = int(retries or ti.get("retries", 3))
         self._client = None
+        self.auth_failed = False
         self.rate_limit = int(ti.get("rate_limit_per_min", 200))
         self._last_call = None
     async def __aenter__(self):
@@ -63,7 +64,13 @@ class TInvestClient:
                     await asyncio.sleep(ra)
                     continue
                 if r.status_code >= 400:
-                    log.error("HTTP %s %s text=%s", r.status_code, endpoint, r.text)
+                    _txt = r.text or ""
+                    _auth = (r.status_code == 401) or ("40003" in _txt) or ("UNAUTHENTICATED" in _txt)
+                    if _auth:
+                        self.auth_failed = True
+                        log.error("AUTH FAILED %s: %s", r.status_code, _txt[:200])
+                    else:
+                        log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
                     r.raise_for_status()
                 return r.json()
             except Exception as e:
