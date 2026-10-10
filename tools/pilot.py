@@ -117,6 +117,29 @@ def _maybe_backup(state):
     except Exception as e:
         print(chr(91)+chr(112)+chr(105)+chr(108)+chr(111)+chr(116)+chr(93)+chr(32)+chr(98)+chr(97)+chr(99)+chr(107)+chr(117)+chr(112)+chr(32)+chr(101)+chr(114)+chr(114)+chr(58), str(e), flush=True)
 
+def _check_daily_limit_warn(state):
+    import json,sqlite3
+    try:
+        cfg=json.loads((ROOT/"config.json").read_text(encoding="utf-8"))
+        db=ROOT/"data"/"robot.db"
+        c=sqlite3.connect(str(db))
+        for r in cfg.get("robots",[]):
+            rid=r.get("id")
+            lim=float(r.get("params",{}).get("daily_loss_limit",0) or 0)
+            if lim<=0: continue
+            _row=c.execute("SELECT peak_value FROM robot_state WHERE robot_id=?",(rid,)).fetchone()
+            if not _row or not _row[0]: continue
+            peak=float(_row[0])
+            _tr=c.execute("SELECT SUM(CASE WHEN kind=\'SELL' THEN price*qty ELSE -price*qty END) FROM trades WHERE robot_id=? AND ts>=date(\'now')",(rid,)).fetchone()
+            day_pnl=float(_tr[0] or 0)
+            if day_pnl<0 and peak>0:
+                dd=abs(day_pnl)/peak
+                if dd>=lim*0.8:
+                    _notify("daily loss warn R"+str(rid),"approaching limit "+str(round(dd*100,1))+"% of "+str(round(lim*100,1))+"%")
+        c.close()
+    except Exception:
+        pass
+
 def main():
     print("[pilot] start " + str(ROOT), flush=True)
     state = _load()
@@ -126,6 +149,7 @@ def main():
             _check_silent(state)
             _check_price(state, lines)
             _check_trade_errors(state)
+            _check_daily_limit_warn(state)
             _maybe_backup(state)
             _save(state)
             print("[pilot] ok age=" + str(int(_age())) + "s", flush=True)
