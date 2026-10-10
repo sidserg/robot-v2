@@ -394,6 +394,15 @@ class RobotLoop:
         self._paused = self._read_paused()
         if self._paused:
             return
+        try:
+            from broker.schedule import is_trading_now
+            _ok, _why = is_trading_now()
+            if not _ok:
+                self._last_tick_time = time.time()
+                log.info("[robot-%s] market %s, skip tick", self.rid, _why)
+                return
+        except Exception:
+            pass
 
         _now_ts = time.time()
         _gap = 0.0

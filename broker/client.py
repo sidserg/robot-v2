@@ -70,7 +70,10 @@ class TInvestClient:
                         self.auth_failed = True
                         log.error("AUTH FAILED %s: %s", r.status_code, _txt[:200])
                     else:
-                        log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
+                        if "30079" in _txt or "not available for trading" in _txt.lower():
+                            log.info("HTTP %s %s (exchange closed): %s", r.status_code, endpoint, _txt[:120])
+                        else:
+                            log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
                     r.raise_for_status()
                 return r.json()
             except Exception as e:
