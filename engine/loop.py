@@ -319,6 +319,10 @@ class RobotLoop:
             if self.stop_order_id:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
+                try:
+                    repo.save_state(self.rid, stop_order_id="")
+                except Exception:
+                    pass
             try:
                 _pq, _, _ = await self.get_position()
                 if _pq <= 0:
