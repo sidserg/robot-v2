@@ -165,6 +165,39 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if self.path.startswith("/api/equity"):
+            try:
+                from urllib.parse import urlparse, parse_qs
+                pr=parse_qs(urlparse(self.path).query)
+                rid=int((pr.get("rid") or ["1"])[0])
+                days=int((pr.get("days") or ["7"])[0])
+                from db import repo as _rp
+                rows=_rp.get_equity(rid, days=days)
+                body=json.dumps({"rid":rid,"rows":rows}, ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            except Exception as _eqe:
+                _b=json.dumps({"error": str(_eqe)[:200]}).encode("utf-8")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(_b)
+            return
+        if self.path == "/equity" or self.path.startswith("/equity?"):
+            try:
+                from tools.equity_page import HTML as _EQHTML
+                _ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                _html=_EQHTML.replace("__TS__",_ts).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type","text/html; charset=utf-8")
+                self.send_header("Content-Length",str(len(_html)))
+                self.end_headers()
+                self.wfile.write(_html)
+            except Exception as _ehe:
+                self.send_response(500); self.end_headers()
+            return
         if self.path == "/health":
             try:
                 data=asyncio.run(_collect())
