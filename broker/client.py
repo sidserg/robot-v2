@@ -70,7 +70,7 @@ class TInvestClient:
                         self.auth_failed = True
                         log.error("AUTH FAILED %s: %s", r.status_code, _txt[:200])
                     else:
-                        if "30079" in _txt or "not available for trading" in _txt.lower():
+                        if "30079" in _txt or "30049" in _txt or "not available for trading" in _txt.lower() or "order book is empty" in _txt.lower():
                             log.info("HTTP %s %s (exchange closed): %s", r.status_code, endpoint, _txt[:120])
                         else:
                             log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
