@@ -307,6 +307,20 @@ class RobotLoop:
             if self.stop_order_id:
                 await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
                 self.stop_order_id = None
+            try:
+                _pq, _, _ = await self.get_position()
+                if _pq <= 0:
+                    log.warning("[robot-%s] SELL requested but position=%s, skip", self.rid, _pq)
+                    return False
+                _lot = max(1, int(getattr(self, "lot", 1) or 1))
+                _avail = self._floor_lot(_pq, _lot)
+                if qty > _avail:
+                    log.warning("[robot-%s] SELL qty=%s > position=%s, clamping", self.rid, qty, _avail)
+                    qty = _avail
+                if qty <= 0:
+                    return False
+            except Exception as _pe:
+                log.warning("[robot-%s] position check before SELL failed: %s", self.rid, str(_pe)[:100])
             _ot = "ORDER_TYPE_MARKET"
             _px = None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
