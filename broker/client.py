@@ -74,7 +74,10 @@ class TInvestClient:
                             log.info("HTTP %s %s (exchange closed): %s", r.status_code, endpoint, _txt[:120])
                         else:
                             log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
-                    r.raise_for_status()
+                    if 400 <= r.status_code < 500:
+                        r.raise_for_status()
+                    else:
+                        r.raise_for_status()
                 return r.json()
             except Exception as e:
                 last_exc = e
