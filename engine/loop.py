@@ -637,7 +637,7 @@ class RobotLoop:
             if _risk_pct > 0 and _cash > 0:
                 _risk_size = int((_cash * _risk_pct) / cur) if cur > 0 else 0
                 if _risk_size > 0 and _risk_size < size:
-                    log.info("[robot-%s] risk sizing: %s -> %s ("+str(int(_risk_pct*100))+"% of cash)", self.rid, int(size), _risk_size)
+                    log.info("[robot-%s] risk sizing: %s -> %s (%s%% of cash)", self.rid, int(size), _risk_size, int(_risk_pct*100))
                     size = float(_risk_size)
             _use_atr = bool(self.params.get("atr_sizing", False))
             _atr_p = int(self.params.get("atr_period", 14) or 14)
