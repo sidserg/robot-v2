@@ -14,4 +14,4 @@ class Strategy:
         raise NotImplementedError
 
     def position_size(self, price: float) -> float:
-        return float(self.params.get("qty_limit", 10))
+        return float(self.params.get("qty_limit", self.params.get("quantity_limit", 10)) or 10)
