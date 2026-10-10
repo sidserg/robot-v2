@@ -1,27 +1,41 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+import os
 import pathlib
 import subprocess
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHECK_SEC = 60
+MY_PID = os.getpid()
 
 
-def _count_robots():
+def _pids_of_multi():
     try:
-        r = subprocess.run(["wmic", "process", "where", "name=python.exe", "get", "CommandLine"], capture_output=True, text=True, timeout=15)
-        out = (r.stdout or "").lower()
-        return out.count("multi.py")
+        r = subprocess.run(["wmic", "process", "where", "name=python.exe", "get", "ProcessId,CommandLine"], capture_output=True, text=True, timeout=15)
+        out = r.stdout or ""
+        pids = []
+        for ln in out.splitlines():
+            low = ln.lower()
+            if "multi.py" in low and "watch" not in low:
+                parts = ln.split()
+                try:
+                    pids.append(int(parts[-1]))
+                except Exception:
+                    pass
+        return pids
     except Exception:
-        return -1
+        return []
 
 
-def _kill_all():
-    try:
-        subprocess.run(["wmic", "process", "where", "name=python.exe", "call", "terminate"], capture_output=True, timeout=15)
-    except Exception:
-        pass
+def _kill(pids):
+    for p in pids:
+        if p == MY_PID:
+            continue
+        try:
+            subprocess.run(["taskkill", "/F", "/PID", str(p)], capture_output=True, timeout=10)
+        except Exception:
+            pass
 
 
 def _spawn():
@@ -30,18 +44,19 @@ def _spawn():
 
 
 def main():
-    print("[w] watchrdog start " + str(ROOT), flush=True)
+    print("[w] watchdog start pid=" + str(MYP_ID), flush=True)
     while True:
         try:
-            n = _count_robots()
+            pids = _pids_of_multi()
+            n = len(pids)
             if n == 0:
-                print("[w] no robot, restarting", flush=True)
+                print("[w] no robot, restart", flush=True)
                 time.sleep(3)
                 _spawn()
                 time.sleep(20)
             elif n > 1:
-                print("[w] duplicates " + str(n) + ", killing all", flush=True)
-                _kill_all()
+                print("[w] duplicates " + str(n) + ", keep first", flush=True)
+                _kill(pids[1:])
                 time.sleep(5)
             else:
                 print("[w] ok " + time.strftime("%H:%M:%S"), flush=True)
