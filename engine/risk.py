@@ -20,9 +20,29 @@ class RiskManager:
         self.velocity_pct = float(p.get("velocity_limit", 0.03))
         self.velocity_window = int(p.get("velocity_window_sec", 300))
         self._eq_hist = collections.deque(maxlen=64)
+        self.reject_threshold = int(p.get("reject_storm_threshold", 10) or 10)
+        self.reject_window_sec = int(p.get("reject_storm_window_sec", 300) or 300)
+        self._rejects = collections.deque(maxlen=64)
+        self.reject_stopped = False
+        self.reject_stopped_date = None
+
+    def record_reject(self):
+        _now = datetime.now(timezone.utc).timestamp()
+        self._rejects.append(_now)
+        while self._rejects and _now - self._rejects[0] > self.reject_window_sec:
+            self._rejects.popleft()
+        if self.reject_threshold > 0 and len(self._rejects) >= self.reject_threshold:
+            self.reject_stopped = True
+            self.reject_stopped_date = datetime.now(timezone.utc).date()
 
     def check(self, equity: float) -> tuple[bool, str]:
         today = datetime.now(timezone.utc).date()
+        if self.reject_stopped:
+            if self.reject_stopped_date != today:
+                self.reject_stopped = False
+                self._rejects.clear()
+            else:
+                return False, "reject storm ("+str(len(self._rejects))+" in "+str(self.reject_window_sec)+"s)"
         if self.stopped:
             _is_vel = "velocity" in (self.stopped_reason or "")
             if _is_vel and self.stopped_date != today:

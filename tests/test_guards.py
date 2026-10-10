@@ -11,3 +11,19 @@ def test_loop_halts_on_negative_qty():
 def test_loop_persists_pending_info():
     s=(ROOT/(chr(101)+chr(110)+chr(103)+chr(105)+chr(110)+chr(101))/(chr(108)+chr(111)+chr(111)+chr(112)+chr(46)+chr(112)+chr(121))).read_text(encoding=chr(117)+chr(116)+chr(102)+chr(45)+chr(56))
     assert chr(112)+chr(101)+chr(110)+chr(100)+chr(105)+chr(110)+chr(103)+chr(95)+chr(105)+chr(110)+chr(102)+chr(111) in s
+def test_risk_reject_storm():
+    from engine.risk import RiskManager
+    r=RiskManager({"reject_storm_threshold":3,"reject_storm_window_sec":300})
+    for _ in range(3):
+        r.record_reject()
+    ok,why=r.check(1000.0)
+    assert not ok
+    assert "reject storm" in why
+
+def test_risk_reject_storm_clears_next_day():
+    from engine.risk import RiskManager
+    r=RiskManager({"reject_storm_threshold":1})
+    r.record_reject()
+    r.reject_stopped_date=r.reject_stopped_date.replace(day=1) if r.reject_stopped_date else None
+    ok,why=r.check(1000.0)
+    assert ok

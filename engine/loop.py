@@ -301,6 +301,10 @@ class RobotLoop:
             if _emsg == getattr(self, "_last_buy_err", None):
                 return False
             self._last_buy_err = _emsg
+            try:
+                self.risk.record_reject()
+            except Exception:
+                pass
             log.error("[robot-%s] BUY FAILED: %s", self.rid, _emsg)
             _nt.notify_error(self.rid, "BUY FAILED: " + str(e)[:100])
             return False
@@ -349,6 +353,10 @@ class RobotLoop:
                     pass
                 return False
             if "REJECT" in _st:
+                try:
+                    self.risk.record_reject()
+                except Exception:
+                    pass
                 log.error("[robot-%s] SELL REJECTED: %s", self.rid, _st)
                 try:
                     repo.add_trade({"robot_id": self.rid, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "kind": "SELL", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": price, "total": qty*price, "commission": 0.0, "order_id": res.order_id, "status": "REJECTED:"+_st, "mode": self.mode, "strategy": self.strategy.name})
