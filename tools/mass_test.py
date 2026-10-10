@@ -10,6 +10,12 @@ from strategies.sma import SMAStrategy
 DB=R/"data"/"robot.db"
 def _schema(conn):
     conn.execute("CREATE TABLE IF NOT EXISTS mass_test (ticker TEXT PRIMARY KEY, days INTEGER, sma_pct REAL, bh_pct REAL, alpha REAL, trades INTEGER, ts TEXT)")
+    for _col in ("atr_pct","atr_trades","slip_pct","slip_trades"):
+        try:
+            conn.execute("ALTER TABLE mass_test ADD COLUMN "+_col+" REAL")
+        except Exception:
+            pass
+    conn.commit()
     conn.commit()
 def main():
     toks=json.loads((R/"data"/"tickers_tqbr.json").read_text(encoding="utf-8"))
@@ -25,10 +31,13 @@ def main():
             continue
         if not c or len(c)<30:
             continue
-        m=run_backtest(SMAStrategy({"fast":5,"slow":20}), c, qty_limit=100, stop_loss=0.05, take_profit=0.15)
+        _strat={"fast":5,"slow":20}
+        m=run_backtest(SMAStrategy(_strat), c, qty_limit=100, stop_loss=0.05, take_profit=0.15)
+        m_atr=run_backtest(SMAStrategy(_strat), c, qty_limit=100, stop_loss=0.05, take_profit=0.15, atr_sizing=True, atr_period=14, atr_mult=2.0, risk_pct=0.02)
+        m_slip=run_backtest(SMAStrategy(_strat), c, qty_limit=100, stop_loss=0.05, take_profit=0.15, slippage_pct=0.001)
         px0=c[0].close; pxN=c[-1].close
         bh=(pxN-px0)/px0*100.0
-        conn.execute("REPLACE INTO mass_test VALUES (?,?,?,?,?,?,?)", (tk, len(c), m.pnl_pct, bh, m.pnl_pct-bh, m.trades_total, ts))
+        conn.execute("REPLACE INTO mass_test (ticker,days,sma_pct,bh_pct,alpha,trades,ts,atr_pct,atr_trades,slip_pct,slip_trades) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (tk, len(c), m.pnl_pct, bh, m.pnl_pct-bh, m.trades_total, ts, m_atr.pnl_pct, m_atr.trades_total, m_slip.pnl_pct, m_slip.trades_total))
         conn.commit()
         n+=1
         if n%10==0:

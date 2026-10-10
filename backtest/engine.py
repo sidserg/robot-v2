@@ -24,8 +24,19 @@ class Metrics:
     equity_curve: list = field(default_factory=list)
 
 
+def _atr(candles, i, period):
+    if i < period: return 0.0
+    trs=[]
+    for k in range(i-period+1, i+1):
+        h=candles[k].high; l=candles[k].low; pc=candles[k-1].close if k>0 else candles[k].close
+        tr=max(h-l, abs(h-pc), abs(l-pc))
+        trs.append(tr)
+    return sum(trs)/len(trs) if trs else 0.0
+
 def run_backtest(strategy, candles, qty_limit=100, stop_loss=0.05,
-                 take_profit=0.15, trail_pct=0.0, start_capital=100000.0):
+                 take_profit=0.15, trail_pct=0.0, start_capital=100000.0,
+                 atr_sizing=False, atr_period=14, atr_mult=2.0, risk_pct=0.02,
+                 slippage_pct=0.0):
     cash = start_capital
     qty = 0.0
     avg = 0.0
@@ -53,33 +64,43 @@ def run_backtest(strategy, candles, qty_limit=100, stop_loss=0.05,
                     ts = peak_px * (1 - trail_pct)
                     if ts > sl:
                         sl = ts
+            _sl_px = px * (1 - slippage_pct) if slippage_pct > 0 else px
             if px <= sl:
-                fee = px * qty * COMMISSION
-                cash += px * qty - fee
-                sells.append((px - avg) * qty - fee)
+                fee = _sl_px * qty * COMMISSION
+                cash += _sl_px * qty - fee
+                sells.append((_sl_px - avg) * qty - fee)
                 qty = 0.0; avg = 0.0; peak_px = 0.0; armed = False
             elif px >= tp:
-                fee = px * qty * COMMISSION
-                cash += px * qty - fee
-                sells.append((px - avg) * qty - fee)
+                fee = _sl_px * qty * COMMISSION
+                cash += _sl_px * qty - fee
+                sells.append((_sl_px - avg) * qty - fee)
                 qty = 0.0; avg = 0.0; peak_px = 0.0; armed = False
 
         sig = strategy.signal(sub, qty, avg)
         if sig.action == "BUY" and qty <= 0:
             size = float(qty_limit)
-            cost = size * px
+            if atr_sizing:
+                _a=_atr(candles,i,atr_period)
+                if _a>0 and atr_mult>0:
+                    _budget=cash*risk_pct
+                    _sz=int(_budget/(_a*atr_mult))
+                    if _sz>0:
+                        size=min(size,float(_sz))
+            _buy_px=px*(1+slippage_pct) if slippage_pct>0 else px
+            cost = size * _buy_px
             fee = cost * COMMISSION
             if cash >= cost + fee:
                 cash -= (cost + fee)
                 qty = size
-                avg = px
-                peak_px = px
+                avg = _buy_px
+                peak_px = _buy_px
                 armed = False
                 buys += 1
         elif sig.action == "SELL" and qty > 0:
-            fee = px * qty * COMMISSION
-            cash += px * qty - fee
-            sells.append((px - avg) * qty - fee)
+            _sell_px = px * (1 - slippage_pct) if slippage_pct > 0 else px
+            fee = _sell_px * qty * COMMISSION
+            cash += _sell_px * qty - fee
+            sells.append((_sell_px - avg) * qty - fee)
             qty = 0.0; avg = 0.0; peak_px = 0.0; armed = False
 
         eq = cash + qty * px
