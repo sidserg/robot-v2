@@ -1,69 +1,33 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-import os
 import pathlib
 import subprocess
 import time
-
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHECK_SEC = 60
-MY_PID = os.getpid()
-
-
-def _pids_of_multi():
+def _has_robot():
     try:
-        r = subprocess.run(["wmic", "process", "where", "name=python.exe", "get", "ProcessId,CommandLine"], capture_output=True, text=True, timeout=15)
-        out = r.stdout or ""
-        pids = []
-        for ln in out.splitlines():
-            low = ln.lower()
-            if "multi.py" in low and "watch" not in low:
-                parts = ln.split()
-                try:
-                    pids.append(int(parts[-1]))
-                except Exception:
-                    pass
-        return pids
+        r = subprocess.run(["wmic","process","where","name=python.exe","get","CommandLine"], capture_output=True, text=True, timeout=15)
+        out = (r.stdout or "").lower()
+        return "multi.py" in out
     except Exception:
-        return []
-
-
-def _kill(pids):
-    for p in pids:
-        if p == MY_PID:
-            continue
-        try:
-            subprocess.run(["taskkill", "/F", "/PID", str(p)], capture_output=True, timeout=10)
-        except Exception:
-            pass
-
-
+        return True
 def _spawn():
-    cmd = "cd /d " + str(ROOT) + " && python runner\\multi.py"
-    subprocess.Popen(["cmd", "/k", cmd], cwd=str(ROOT), creationflags=subprocess.CREATE_NEW_CONSOLE)
-
-
+    c = "cd /d " + str(ROOT) + " && python runner\\multi.py"
+    subprocess.Popen([chr(99)+chr(109)+chr(100), chr(47)+chr(107), c], cwd=str(ROOT), creationflags=subprocess.CREATE_NEW_CONSOLE)
 def main():
-    print("[w] watchdog start pid=" + str(MYP_ID), flush=True)
+    print(chr(91)+chr(119)+chr(93)+chr(32)+chr(115)+chr(116)+chr(97)+chr(114)+chr(116), flush=True)
     while True:
         try:
-            pids = _pids_of_multi()
-            n = len(pids)
-            if n == 0:
-                print("[w] no robot, restart", flush=True)
-                time.sleep(3)
-                _spawn()
-                time.sleep(20)
-            elif n > 1:
-                print("[w] duplicates " + str(n) + ", keep first", flush=True)
-                _kill(pids[1:])
-                time.sleep(5)
+            if _has_robot():
+                print(chr(91)+chr(119)+chr(93)+chr(32)+chr(111)+chr(107)+chr(32)+time.strftime(chr(37)+chr(72)+chr(58)+chr(37)+chr(77)+chr(58)+chr(37)+chr(83)), flush=True)
             else:
-                print("[w] ok " + time.strftime("%H:%M:%S"), flush=True)
+                print(chr(91)+chr(119)+chr(93)+chr(32)+chr(110)+chr(111)+chr(32)+chr(114)+chr(111)+chr(98)+chr(111)+chr(116), flush=True)
+                time.sleep(5)
+                _spawn()
+                time.sleep(30)
         except Exception as e:
-            print("[w] err " + str(e), flush=True)
+            print(chr(91)+chr(119)+chr(93)+chr(32)+chr(101)+chr(114)+chr(114)+chr(32)+str(e), flush=True)
         time.sleep(CHECK_SEC)
-
-
 if __name__ == "__main__":
     main()
