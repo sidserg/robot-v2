@@ -26,7 +26,17 @@ async def get_portfolio(c: TInvestClient, account_id: str) -> Portfolio:
     total = _f(r.get("totalAmountPortfolio"))
     return Portfolio(account_id=account_id, positions=positions, cash_rub=cash_rub, total_value=total)
 
-async def get_candles(c: TInvestClient, figi: str, from_i: str, to_i: str, interval: str = "CANDLE_INTERVAL_HOUR") -> list[Candle]:
+_CD_CACHE = {}
+import time as _t_cd
+def _cd_key(figi, interval, days):
+    return (figi, interval, days)
+
+async def get_candles(c: TInvestClient, figi: str, from_i: str, to_i: str, interval: str = "CANDLE_INTERVAL_HOUR", cache_ttl: int = 30) -> list[Candle]:
+    _key = _cd_key(figi, interval, from_i[:10] + to_i[:10])
+    _now = _t_cd.monotonic()
+    _hit = _CD_CACHE.get(_key)
+    if _hit and _now - _hit[0] < cache_ttl:
+        return _hit[1]
     r = await c.call("MarketDataService/GetCandles", {"figi": figi, "from": from_i, "to": to_i, "interval": interval})
     out = []
     for k in r.get("candles", []):
@@ -34,6 +44,7 @@ async def get_candles(c: TInvestClient, figi: str, from_i: str, to_i: str, inter
         if c_ <= 0:
             continue
         out.append(Candle(time=k.get("time", ""), open=_f(k.get("open")), high=_f(k.get("high")) or c_, low=_f(k.get("low")) or c_, close=c_, volume=int(k.get("volume", 0) or 0), is_complete=bool(k.get("isComplete", True))))
+    _CD_CACHE[_key] = (_now, out)
     return out
 
 async def get_last_price(c: TInvestClient, figi: str) -> float:
