@@ -8,8 +8,8 @@ from typing import Any
 class RiskManager:
     def __init__(self, params):
         p = params or {}
-        self.daily_limit = float(p.get("daily_loss_limit", 0.0))
-        self.max_dd = float(p.get("max_drawdown", 0.0))
+        self.daily_limit = float(p.get("daily_loss_limit", p.get("daily_loss_limit_percent", 0.0)) or 0.0)
+        self.max_dd = float(p.get("max_drawdown", p.get("global_loss_limit_percent", 0.0)) or 0.0)
         self.day_date = None
         self.day_equity_start = 0.0
         self.day_stopped = False
