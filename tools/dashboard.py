@@ -39,6 +39,7 @@ th{background:#252932;color:#8892a0;font-weight:normal;font-size:12px}
 .refresh{color:#4a90d9;cursor:pointer;font-size:13px}
 </style></head><body>
 <h1>RobotV2 <span class="refresh" onclick="location.reload()">обновить</span> <button onclick="doSave()" style="background:#4a90d9;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:14px;margin-left:12px">Сохранить</button> <span id="saveMsg" style="color:#8892a0;font-size:13px;margin-left:8px"></span></h1>
+<div style="margin-bottom:16px"><a href="/" style="background:#243b57;color:#7ab8f5;border:1px solid #7ab8f5;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;margin-right:8px">Главная</a><a href="/equity" style="background:#1e2229;color:#8892a0;border:1px solid #30363d;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;margin-right:8px">Equity</a><a href="http://127.0.0.1:8771/" target="_blank" style="background:#1e2229;color:#8892a0;border:1px solid #30363d;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;margin-right:8px">График</a></div>
 <div class="info">__TS__</div>
 <h2>Роботы</h2><div id="robots"></div>
 <h2>Позиции</h2><div id="positions"></div>
