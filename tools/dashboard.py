@@ -165,6 +165,41 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if self.path == "/health":
+            try:
+                data=asyncio.run(_collect())
+                import sqlite3
+                _db=ROOT/"data"/"robot.db"
+                _n=0
+                _rec=0
+                try:
+                    _c=sqlite3.connect(str(_db))
+                    _n=_c.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
+                    _rec=_c.execute("SELECT COUNT(*) FROM trades WHERE status LIKE '%RECONCILED%'").fetchone()[0]
+                    _c.close()
+                except Exception:
+                    pass
+                _lp=ROOT/"logs"/"robot.log"
+                _errs=0
+                try:
+                    for _ln in _lp.read_text(encoding="utf-8",errors="replace").splitlines():
+                        if "[ERROR]" in _ln: _errs+=1
+                except Exception:
+                    pass
+                _sz=_db.stat().st_size//1024 if _db.exists() else 0
+                health={"status":"ok","robots":data.get("robots",[]),"trades_total":_n,"reconciled":_rec,"errors":_errs,"db_kb":_sz}
+                body=json.dumps(health,ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type","application/json; charset=utf-8")
+                self.send_header("Content-Length",str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            except Exception as _he:
+                _b=json.dumps({"status":"error","msg":str(_he)[:200]}).encode("utf-8")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(_b)
+            return
         if self.path == "/" or self.path.startswith("/?"):
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             html = HTML.replace("__TS__", ts).encode("utf-8")
