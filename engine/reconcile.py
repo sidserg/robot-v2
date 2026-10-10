@@ -76,6 +76,15 @@ async def ensure_stop(loop, size, avg):
         r = await od.post_stop_order(loop.c, loop.account_id, loop.figi, size, sp)
         loop.stop_fail_count = 0
         loop.stop_order_id = r.order_id
+        try:
+            loop._api_stop_price = sp
+        except Exception:
+            pass
+        try:
+            from db import repo as _rp2
+            _rp2.save_state(loop.rid, stop_order_id=r.order_id)
+        except Exception:
+            pass
         log.info("[robot-%s] stop placed @ %s qty=%s", loop.rid, sp, size)
     except Exception as e:
         _fc = int(getattr(loop, "stop_fail_count", 0) or 0) + 1

@@ -554,9 +554,10 @@ class RobotLoop:
                         _old_stop = float(getattr(self, "_api_stop_price", 0) or 0)
                         if _old_stop <= 0 or abs(_new_stop - _old_stop) / _old_stop > 0.005:
                             try:
-                                if self.stop_order_id:
-                                    await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
+                                _old_id = self.stop_order_id
                                 _r = await od.post_stop_order(self.c, self.account_id, self.figi, qty, _new_stop)
+                                if _old_id and _old_id != _r.order_id:
+                                    await od.cancel_stop_order(self.c, self.account_id, _old_id)
                                 self.stop_order_id = _r.order_id
                                 self._api_stop_price = _new_stop
                                 try:
