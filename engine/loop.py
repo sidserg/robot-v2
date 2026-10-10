@@ -489,6 +489,14 @@ class RobotLoop:
             self._last_candle_ts = _lct
             self._stale_candle_count = 0
         qty, avg, cur = await self.get_position()
+        if qty < 0:
+            log.error("[robot-%s] NEGATIVE position qty=%s, halt robot (manual fix required)", self.rid, qty)
+            try:
+                _nt.notify_error(self.rid, "negative qty "+str(qty)+", halt")
+            except Exception:
+                pass
+            self._stop = True
+            return
         _last_close = candles[-1].close
         if cur <= 0:
             cur = _last_close
