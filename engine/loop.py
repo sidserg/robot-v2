@@ -362,6 +362,9 @@ class RobotLoop:
             _exq = float(getattr(res, "executed_qty", 0) or 0)
             if _exq <= 0:
                 _exq = qty
+            elif _exq < qty:
+                log.warning("[robot-%s] SELL partial fill %s of %s, force reconcile next tick", self.rid, _exq, qty)
+                self._force_reconcile = True
             _expx = float(getattr(res, "executed_price", 0) or 0)
             if _expx <= 0:
                 _expx = price
