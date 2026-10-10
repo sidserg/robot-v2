@@ -219,6 +219,17 @@ async def run_all():
     if not _lock.acquire():
         print("another runner already active, exiting")
         return
+    try:
+        from tools.validate_config import validate
+        _cfg_probe=loader.load()
+        _errs,_warns=validate(_cfg_probe)
+        if _errs:
+            print("[FATAL] config invalid:")
+            for _e in _errs: print("  "+_e)
+            return
+        for _w in _warns: print("[WARN] "+_w)
+    except Exception as _ve:
+        print("[WARN] validate_config: "+str(_ve)[:120])
     cfg = loader.load()
     setup_logging(cfg)
     log = logging.getLogger("runner")
