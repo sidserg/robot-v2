@@ -21,6 +21,11 @@ def _money(val) -> dict:
     return {"units": str(units), "nano": nano}
 
 async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, direction: str, order_type: str = "ORDER_TYPE_MARKET", order_id: Optional[str] = None, price: Optional[float] = None) -> OrderResult:
+    _q = int(qty)
+    if _q <= 0:
+        raise ValueError("post_order: qty must be > 0, got "+str(qty))
+    if order_type == "ORDER_TYPE_LIMIT" and (not price or price <= 0):
+        raise ValueError("post_order: limit order requires price > 0")
     if not order_id:
         order_id = str(uuid.uuid4())
     body = {"instrumentId": figi, "quantity": str(int(qty)), "direction": direction, "accountId": account_id, "orderType": order_type, "orderId": order_id}
@@ -30,6 +35,11 @@ async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, d
     return OrderResult(order_id=r.get("orderId", order_id), status=r.get("executionReportStatus", ""), executed_qty=_f(r.get("lotsExecuted")), executed_price=_f(r.get("executedOrderPrice")), commission=_f(r.get("executedCommission")), raw=r)
 
 async def post_stop_order(c: TInvestClient, account_id: str, figi: str, qty: float, stop_price: float, direction: str = "STOP_ORDER_DIRECTION_SELL") -> OrderResult:
+    _q = int(qty)
+    if _q <= 0:
+        raise ValueError("post_stop_order: qty must be > 0, got "+str(qty))
+    if not stop_price or stop_price <= 0:
+        raise ValueError("post_stop_order: stop_price must be > 0, got "+str(stop_price))
     body = {"instrumentId": figi, "quantity": str(int(qty)), "stopPrice": _money(stop_price), "direction": direction, "accountId": account_id, "stopOrderType": "STOP_ORDER_TYPE_STOP_LOSS", "expirationType": "STOP_ORDER_EXPIRATION_TYPE_GOOD_TILL_CANCEL"}
     r = await c.call("StopOrdersService/PostStopOrder", body, retries=1)
     return OrderResult(order_id=r.get("stopOrderId", ""), status="STOP", raw=r)
