@@ -293,7 +293,7 @@ class RobotLoop:
             return True
         except Exception as e:
             _emsg = str(e)[:200]
-            if "30079" in _emsg or "30049" in _emsg or "not available for trading" in _emsg.lower() or "order book is empty" in _emsg.lower():
+            if "30079" in _emsg or "30049" in _emsg or "EXCHANGE_CLOSED" in _emsg or "not available for trading" in _emsg.lower() or "order book is empty" in _emsg.lower():
                 if _emsg != getattr(self, "_last_buy_err", None):
                     self._last_buy_err = _emsg
                     log.info("[robot-%s] exchange closed (30079), skip buy", self.rid)

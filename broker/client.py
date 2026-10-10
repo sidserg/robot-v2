@@ -72,6 +72,7 @@ class TInvestClient:
                     else:
                         if "30079" in _txt or "30049" in _txt or "not available for trading" in _txt.lower() or "order book is empty" in _txt.lower():
                             log.info("HTTP %s %s (exchange closed): %s", r.status_code, endpoint, _txt[:120])
+                            raise RuntimeError("EXCHANGE_CLOSED "+_txt[:120])
                         else:
                             log.error("HTTP %s %s text=%s", r.status_code, endpoint, _txt)
                     if 400 <= r.status_code < 500:
