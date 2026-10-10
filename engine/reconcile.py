@@ -88,7 +88,7 @@ async def ensure_stop(loop, size, avg):
             except Exception:
                 pass
 
-async def reconcile_trades(loop, window_min=60):
+async def reconcile_trades(loop, window_min=1440):
     from datetime import datetime, timezone, timedelta
     from db import repo
     try:
@@ -109,11 +109,21 @@ async def reconcile_trades(loop, window_min=60):
         _ot = (o.get("operationType", "") or "").upper()
         if _ot not in ("OPERATION_TYPE_BUY","OPERATION_TYPE_SELL"):
             continue
-        odate = (o.get("date", "") or "")[:16]
+        from datetime import datetime as _dt2
+        def _pts(x):
+            x=(x or "").strip().replace(" ","T").rstrip("Z")
+            if len(x)>19: x=x[:19]
+            try: return _dt2.fromisoformat(x)
+            except Exception: return None
+        _okind="BUY" if "BUY" in _ot else "SELL"
+        _odt=_pts(o.get("date"))
         found = False
         for t in my:
-            tdate = (t.get("ts", "") or "").replace(" ", "T")[:16]
-            if tdate == odate:
+            if (t.get("kind", "") or "").upper() != _okind: continue
+            _tdt=_pts(t.get("ts"))
+            if _tdt is None or _odt is None: continue
+            _dd=abs((_tdt-_odt).total_seconds())
+            if _dd < 180 or abs(_dd-10800) < 180:
                 found = True
                 break
         if not found:
