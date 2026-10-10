@@ -107,8 +107,8 @@
       "id": 4,
       "enabled": true,
       "mode": "sandbox",
-      "figi": "BBG004730ZJ9",
-      "ticker": "VTBR",
+      "figi": "BBG003LYCMB1",
+      "ticker": "SFIN",
       "account_id": "c1430ffe-e959-43fc-ad89-c60cf3545f5d",
       "strategy": "sma",
       "params": {
