@@ -44,3 +44,4 @@ fix_*.py
 _*.py
 # Dumps for chat
 dump/
+data/exports/ 
