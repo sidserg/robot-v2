@@ -396,7 +396,7 @@ class RobotLoop:
             return
         try:
             from broker.schedule import is_trading_now
-            _ok, _why = is_trading_now()
+            _ok, _why = is_trading_now() if self.mode == "real" else (True, "sandbox")
             if not _ok:
                 self._last_tick_time = time.time()
                 log.info("[robot-%s] market %s, skip tick", self.rid, _why)
