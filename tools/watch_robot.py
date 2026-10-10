@@ -5,11 +5,33 @@ import subprocess
 import time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CHECK_SEC = 60
+def _kill_multi():
+    try:
+        r = subprocess.run(["wmic","process","where","name=python.exe","get","ProcessId,CommandLine"], capture_output=True, text=True, timeout=15)
+        for ln in (r.stdout or "").splitlines():
+            if "multi.py" not in ln.lower(): continue
+            parts=ln.strip().split()
+            pid=parts[-1] if parts else ""
+            if pid.isdigit():
+                subprocess.run(["taskkill","/F","/PID",pid], capture_output=True)
+    except Exception:
+        pass
+
 def _has_robot():
     try:
         r = subprocess.run(["wmic","process","where","name=python.exe","get","CommandLine"], capture_output=True, text=True, timeout=15)
         out = (r.stdout or "").lower()
-        return "multi.py" in out
+        if "multi.py" not in out:
+            return False
+        lp = ROOT / "logs" / "robot.log"
+        if not lp.exists():
+            return True
+        age = time.time() - lp.stat().st_mtime
+        if age > 300:
+            print("[w] log stale "+str(int(age))+"s, killing", flush=True)
+            _kill_multi()
+            return False
+        return True
     except Exception:
         return True
 def _spawn():
