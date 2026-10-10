@@ -222,12 +222,34 @@ class Handler(BaseHTTPRequestHandler):
                     pass
                 _sz=_db.stat().st_size//1024 if _db.exists() else 0
                 health={"status":"ok","positions":data.get("positions",[]),"trades_total":_n,"reconciled":_rec,"errors":_errs,"db_kb":_sz}
-                body=json.dumps(health,ensure_ascii=False).encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type","application/json; charset=utf-8")
-                self.send_header("Content-Length",str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
+                _acc=self.headers.get("Accept","")
+                if "text/html" in _acc:
+                    from tools.health_page import HTML as _HP
+                    _rows=""
+                    for _p in health["positions"]:
+                        _cl="pnl-pos" if (_p.get("yield",0) or 0)>=0 else "pnl-neg"
+                        _rows+="<tr><td>"+str(_p.get("robot_id",""))+"</td><td><b>"+str(_p.get("ticker",""))+"</b></td><td>"+str(_p.get("qty",0))+"</td><td>"+str(round(_p.get("avg",0),2))+"</td><td>"+str(round(_p.get("price",0),2))+"</td><td class=""+_cl+"">"+str(round(_p.get("yield",0),2))+"</td></tr>"
+                    _err_cls="pnl-pos" if health["errors"]==0 else "pnl-neg"
+                    _h=_HP.replace("__STATUS__",str(health["status"]))
+                    _h=_h.replace("__TRADES__",str(health["trades_total"]))
+                    _h=_h.replace("__RECON__",str(health["reconciled"]))
+                    _h=_h.replace("__ERRS__",str(health["errors"]))
+                    _h=_h.replace("__ERRCLS__",_err_cls)
+                    _h=_h.replace("__DB__",str(health["db_kb"]))
+                    _h=_h.replace("__ROWS__",_rows)
+                    body=_h.encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type","text/html; charset=utf-8")
+                    self.send_header("Content-Length",str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                else:
+                    body=json.dumps(health,ensure_ascii=False).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type","application/json; charset=utf-8")
+                    self.send_header("Content-Length",str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
             except Exception as _he:
                 _b=json.dumps({"status":"error","msg":str(_he)[:200]}).encode("utf-8")
                 self.send_response(500)
