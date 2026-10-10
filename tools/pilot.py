@@ -117,6 +117,17 @@ def _maybe_backup(state):
     except Exception as e:
         print(chr(91)+chr(112)+chr(105)+chr(108)+chr(111)+chr(116)+chr(93)+chr(32)+chr(98)+chr(97)+chr(99)+chr(107)+chr(117)+chr(112)+chr(32)+chr(101)+chr(114)+chr(114)+chr(58), str(e), flush=True)
 
+def _check_reconcile_repeat(state):
+    try:
+        _s=_last(200)
+        _rec=0
+        for ln in _s:
+            if "RECONCILED" in ln: _rec+=1
+        if _rec>=3:
+            _notify("reconcile repeat","RECONCILED x"+str(_rec)+" - check duplicate logic")
+    except Exception:
+        pass
+
 def _check_daily_limit_warn(state):
     import json,sqlite3
     try:
@@ -150,6 +161,7 @@ def main():
             _check_price(state, lines)
             _check_trade_errors(state)
             _check_daily_limit_warn(state)
+            _check_reconcile_repeat(state)
             _maybe_backup(state)
             _save(state)
             print("[pilot] ok age=" + str(int(_age())) + "s", flush=True)
