@@ -198,6 +198,10 @@ async def _daily_report_task(stop_ev, log):
         except asyncio.TimeoutError:
             pass
 async def run_all():
+    from runner import lock as _lock
+    if not _lock.acquire():
+        print("another runner already active, exiting")
+        return
     cfg = loader.load()
     setup_logging(cfg)
     log = logging.getLogger("runner")
