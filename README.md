@@ -132,6 +132,16 @@ start "pilot" cmd /k "python tools/pilot.py"
 - **Anomaly guard** — qty>0, avg=0 -> alert + skip
 - **max_jump_percent** — блок новых входов при скачке >5%
 - **Cross-kill** — общая просадка по всем счетам >5% -> halt всех роботов
+- **Reject storm** — N отказов ордеров за окно -> halt до конца дня (reject_storm_threshold, reject_storm_window_sec)
+
+### Сайзинг позиции
+
+- **qty_limit** — фиксированный размер (по умолчанию)
+- **risk_per_trade_pct** — размер = % от кэша, но не больше qty_limit
+- **atr_sizing=true** — размер = риск-бюджет / (ATR * atr_mult). Одинаковый риск на сделку для разных бумаг
+  - `atr_period` (по умолчанию 14), `atr_mult` (по умолчанию 2.0)
+  - `risk_per_trade_pct` задаёт риск-бюджет (по умолчанию 1% от кэша)
+  - пример для TATN: `atr_sizing=true, atr_period=14, atr_mult=2.0, risk_per_trade_pct=0.02`
 
 ### Связь и данные
 
