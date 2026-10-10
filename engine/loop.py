@@ -90,6 +90,16 @@ class RobotLoop:
             _st = repo.load_state(self.rid)
             if _st:
                 self.stop_order_id = _st.get("stop_order_id") or None
+                try:
+                    self.risk.peak_value = float(_st.get("peak_value") or 0)
+                    self.risk.day_equity_start = float(_st.get("day_equity_start") or 0)
+                    _dd = _st.get("day_date")
+                    if _dd:
+                        from datetime import datetime as _dt2
+                        self.risk.day_date = _dt2.fromisoformat(_dd).date()
+                    self.risk.day_stopped = bool(_st.get("day_stopped") or 0)
+                except Exception:
+                    pass
                 _ltt = _st.get("last_tick_ts")
                 if _ltt:
                     try:
@@ -479,6 +489,16 @@ class RobotLoop:
             return
         equity = qty * cur
         ok, reason = self.risk.check(equity if equity > 0 else 1.0)
+        try:
+            repo.save_state(
+                self.rid,
+                peak_value=float(self.risk.peak_value),
+                day_equity_start=float(self.risk.day_equity_start),
+                day_date=(self.risk.day_date.isoformat() if self.risk.day_date else None),
+                day_stopped=int(self.risk.day_stopped),
+            )
+        except Exception:
+            pass
         if not ok:
             log.warning("[robot-%s] risk stop: %s", self.rid, reason)
             if qty > 0 and avg > 0:
