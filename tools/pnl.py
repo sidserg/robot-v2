@@ -17,7 +17,16 @@ def _stats_for(rid, cur_px):
     trades = repo.get_trades(limit=10000, robot_id=rid)
     if not trades:
         return None
-    tk = trades[-1].get("ticker", "?")
+    _cfg_p = None
+    try:
+        _cf = json.load(open(str(R / "config.json"), encoding="utf-8"))
+        for _r in _cf.get("robots", []):
+            if _r.get("id") == rid:
+                _cfg_p = _r.get("ticker")
+                break
+    except Exception:
+        pass
+    tk = _cfg_p or trades[-1].get("ticker", "?")
     qty_held = 0.0
     cost = 0.0
     comm = 0.0
