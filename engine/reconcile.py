@@ -132,6 +132,24 @@ async def reconcile_trades(loop, window_min=60):
             pass
         if _new:
             log.warning("[robot-%s] T-Invest sees %s new ops not in DB (total %s)", loop.rid, len(_new), len(missing))
+            for o in _new:
+                try:
+                    _otp=(o.get("operationType") or "").upper()
+                    _kind="BUY" if "BUY" in _otp else "SELL"
+                    _date=(o.get("date") or "")[:19].replace("T"," ")
+                    _q=int(o.get("quantity") or 0)
+                    _pv=o.get("price") or {}
+                    _px=0.0
+                    if isinstance(_pv,dict):
+                        _px=float(_pv.get("units",0))+float(_pv.get("nano",0))/1e9
+                    elif _pv:
+                        _px=float(_pv)
+                    if _q<=0 or _px<=0: continue
+                    rec={"robot_id":loop.rid,"ts":_date,"kind":_kind,"ticker":loop.ticker,"figi":o.get("figi") or "","qty":float(_q),"price":_px,"total":_q*_px,"commission":0.0,"order_id":str(o.get("id") or ""),"status":"RECONCILED","mode":loop.mode,"strategy":loop.strategy.name}
+                    repo.add_trade(rec)
+                    log.warning("[robot-%s] RECONCILED %s %s x %s @ %s", loop.rid, _kind, loop.ticker, _q, _px)
+                except Exception as _e:
+                    log.error("[robot-%s] reconcile add_trade: %s", loop.rid, str(_e)[:120])
         else:
             log.info("[robot-%s] %s ops not in DB (already alerted)", loop.rid, len(missing))
     return len(missing)
