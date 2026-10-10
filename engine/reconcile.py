@@ -119,5 +119,19 @@ async def reconcile_trades(loop, window_min=60):
         if not found:
             missing.append(o)
     if missing:
-        log.warning("[robot-%s] T-Invest sees %s ops not in DB", loop.rid, len(missing))
+        _seen = set(getattr(loop, "_seen_missing_ops", set()) or set())
+        _new = []
+        for o in missing:
+            _oid = str(o.get("id") or o.get("date") or "")
+            if _oid and _oid not in _seen:
+                _new.append(o)
+                _seen.add(_oid)
+        try:
+            loop._seen_missing_ops = _seen
+        except Exception:
+            pass
+        if _new:
+            log.warning("[robot-%s] T-Invest sees %s new ops not in DB (total %s)", loop.rid, len(_new), len(missing))
+        else:
+            log.info("[robot-%s] %s ops not in DB (already alerted)", loop.rid, len(missing))
     return len(missing)
