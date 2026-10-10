@@ -206,11 +206,11 @@ async def _daily_report_task(stop_ev, log):
                     from notify import desktop as _nd
                     try:
                         from tools.daily import daily_summary
-                        _ds=daily_summary()
-                        except Exception:
-                        _ds=""
-                        _msg=(out.splitlines()[-1] if out else "")+" | "+_ds
-                        _nd.notify("RobotV2: daily report", _msg)
+                        _ds = daily_summary()
+                    except Exception:
+                        _ds = ""
+                    _msg = (out.splitlines()[-1] if out else "") + " | " + _ds
+                    _nd.notify("RobotV2: daily report", _msg)
                 except Exception:
                     pass
                 last_date = today
