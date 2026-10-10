@@ -169,6 +169,23 @@ async def _schedule_refresh_task(stop_ev, log):
         except asyncio.TimeoutError:
             pass
 
+async def _backup_task(stop_ev, log):
+    import subprocess,sys
+    _p=str(_ROOT/"tools"/"backup_db.py")
+    while not stop_ev.is_set():
+        try:
+            r=subprocess.run([sys.executable,_p],cwd=str(_ROOT),capture_output=True,text=True,timeout=60)
+            if r.returncode==0:
+                log.info("backup: "+((r.stdout or "").strip().splitlines()[0] if r.stdout else "ok"))
+            else:
+                log.warning("backup failed: "+((r.stderr or "")[:120]))
+        except Exception as e:
+            log.warning("backup err: "+str(e)[:120])
+        try:
+            await asyncio.wait_for(stop_ev.wait(),timeout=86400)
+        except asyncio.TimeoutError:
+            pass
+
 async def _daily_report_task(stop_ev, log):
     from datetime import datetime, timezone, timedelta
     MSK = timezone(timedelta(hours=3))
@@ -248,6 +265,7 @@ async def run_all():
         tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
         tasks.append(asyncio.create_task(_daily_report_task(stop_ev, log), name="daily_report"))
         tasks.append(asyncio.create_task(_schedule_refresh_task(stop_ev, log), name="schedule_refresh"))
+        tasks.append(asyncio.create_task(_backup_task(stop_ev, log), name="backup"))
         try:
             await asyncio.gather(*tasks)
         except (asyncio.CancelledError, KeyboardInterrupt):
