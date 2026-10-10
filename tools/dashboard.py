@@ -135,6 +135,9 @@ async def _collect():
                     continue
                 for pos in p.positions:
                     if pos.figi == figi:
+                        _y = pos.expected_yield
+                        if _y == 0 and pos.avg_price > 0 and pos.current_price > 0:
+                            _y = pos.qty * (pos.current_price - pos.avg_price)
                         out["positions"].append({
                             "robot_id": r.get("id"),
                             "ticker": pos.ticker or r.get("ticker", ""),
@@ -142,7 +145,7 @@ async def _collect():
                             "avg": pos.avg_price,
                             "price": pos.current_price,
                             "value": pos.value,
-                            "yield": pos.expected_yield,
+                            "yield": _y,
                         })
     except Exception:
         pass
