@@ -89,3 +89,37 @@
 - Не ставить `armed=true` до полной проверки config.
 - Не отключать daily_loss_limit, max_drawdown, velocity_limit.
 - Не игнорировать desktop-алерты.
+
+## Статус на 2026-10-10
+
+### Готово ✅
+
+- [x] Все защиты настроены в config.json
+- [x] risk_per_trade_pct=0.15 (15% на сделку)
+- [x] daily_loss_limit=0.05, max_drawdown=0.20, velocity_limit=0.03
+- [x] use_limit=true, limit_offset=0.002
+- [x] Preflight через GetInstrument (apiTradeAvailableFlag)
+- [x] Token-expiry detection (401/40003 -> halt)
+- [x] Trailing stop двигается на бирже
+- [x] minPriceIncrement rounding
+- [x] Partial fill safe (executed_qty/price)
+- [x] Risk state persistent (peak, day_equity)
+- [x] 73 теста, все зелёные
+- [x] Live-проверка: gap, stop-loss, market fallback, trailing stop
+- [x] Документация: README, BACKTESTS, MASS_TEST, ROBOT_V2, REAL_TRANSITION
+
+### Осталось сделать ❌
+
+- [ ] Выпустить production-токен (Full-access)
+- [ ] Заменить token.txt на production
+- [ ] В config.json: mode=real (5 роботов)
+- [ ] В config.json: armed=true
+- [ ] Первые 3-7 дней: 1 робот, малый капитал
+
+### Перед запуском real
+
+1. Остановить sandbox: taskkill /F /IM python.exe
+2. Заменить token.txt
+3. mode=real, armed=true в config.json
+4. start_all.bat
+5. Смотреть logs/robot.log первые часы
