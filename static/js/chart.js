@@ -18,8 +18,9 @@ async function load(t){
   if(myid!==REQ_ID)return;
   draw(d);
 }
+var MARKERS=[];
 function draw(d){
-  _last=d;
+  _last=d;MARKERS=[];
   fitCanvas();
   var cv=document.getElementById("cv");
   var ctx=cv.getContext("2d");
@@ -42,32 +43,30 @@ function draw(d){
   ctx.strokeStyle="#7ab8f5";ctx.lineWidth=2;
   ctx.beginPath();for(var i=0;i<n;i++){var xx=X(i);var yy=Y(closes[i]);if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}ctx.stroke();
   var tidx={};for(var i2=0;i2<n;i2++){var kk=cds[i2][0].slice(0,16);tidx[kk]=i2;}
-  function t2s(t){var ss=String(t);if(ss.indexOf("T")>=0){return Math.floor(new Date(ss).getTime()/1000);}if(ss.indexOf(" ")>=0){return Math.floor(new Date(ss.replace(" ","T")+"Z").getTime()/1000);}return 0;}
+  function t2s(t){var ss=String(t).trim();if(ss.length<1)return 0;ss=ss.replace(" ","T");if(ss.length<=19)ss+="Z";var ms=new Date(ss).getTime();if(isNaN(ms))return 0;return Math.floor(ms/1000);}
   var cand_epoch=[];for(var ci=0;ci<n;ci++){cand_epoch.push(t2s(cds[ci][0]));}
   var usedidx={};
   for(var j=0;j<trs.length;j++){
     var t=trs[j];var _ts=t2s(t[2]);if(!_ts)continue;
-    var best=-1,bestd=1e18;for(var bi=0;bi<n;bi++){var dd2=Math.abs(cand_epoch[bi]-_ts);if(dd2<bestd){bestd=dd2;best=bi;}}
-    if(best<0)continue;
-    if(bestd>3600*6)continue;
-    var ii=best;
+    var _tfmap={M1:60,M5:300,M15:900,H1:3600,D1:86400};var _tfs=_tfmap[CUR_TF]||86400;var ii=-1;for(var bi=0;bi<n;bi++){var _s=cand_epoch[bi];if(_ts>=_s&&_ts<_s+_tfs){ii=bi;break;}}
+    if(ii<0)continue;
     var _cnt=usedidx[ii]||0;usedidx[ii]=_cnt+1;
     var _dx=(_cnt%5)*6-12;
     var xx2=X(ii)+_dx;var yy2=Y(t[5]);
 
     var isBuy=t[3].toUpperCase().indexOf("BUY")>=0;
+    MARKERS.push({x:xx2,y:yy2,t:t,isBuy:isBuy});
     ctx.fillStyle=isBuy?"#22c55e":"#ef4444";
-    ctx.beginPath();
-    if(isBuy){ctx.moveTo(xx2,yy2-10);ctx.lineTo(xx2+7,yy2+6);ctx.lineTo(xx2-7,yy2+6);}
-    else{ctx.moveTo(xx2,yy2+10);ctx.lineTo(xx2+7,yy2-6);ctx.lineTo(xx2-7,yy2-6);}
-    ctx.closePath();ctx.fill();ctx.strokeStyle="#fff";ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(xx2,yy2,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#fff";ctx.lineWidth=1.5;ctx.stroke();
     ctx.fillStyle="#fff";ctx.font="bold 9px sans-serif";ctx.textAlign="center";ctx.fillText(isBuy?"B":"S",xx2,yy2+(isBuy?-12:18));
   }
   var info=document.getElementById("info");
   var last=closes[closes.length-1],first=closes[0];
   var chg=((last-first)/first*100).toFixed(2);
   info.innerHTML="<b>"+d.ticker+"</b> px="+last.toFixed(2)+" chg="+chg+"% trades="+trs.length;
-}window.addEventListener("resize",function(){if(_last)draw(_last);});
+}function _ttShow(ev){var cv=document.getElementById("cv");var r=cv.getBoundingClientRect();var mx=ev.clientX-r.left,my=ev.clientY-r.top;var hit=null;for(var i=0;i<MARKERS.length;i++){var m=MARKERS[i];var dx=mx-m.x,dy=my-m.y;if(dx*dx+dy*dy<=100){hit=m;break;}}var tt=document.getElementById("tt");if(!tt){tt=document.createElement("div");tt.id="tt";tt.style.cssText="position:fixed;background:#1a1f2e;color:#e6edf3;border:1px solid #30363d;border-radius:6px;padding:6px 10px;font:12px monospace;pointer-events:none;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.5)";document.body.appendChild(tt);}if(hit){var t=hit.t;var kind=(t[3]||"").toUpperCase();var col=hit.isBuy?"#22c55e":"#ef4444";tt.innerHTML="<b style=color:"+col+">"+kind+"</b> "+Number(t[5]).toFixed(2)+" ₽ <span style=color:#8892a0>x"+t[4]+"</span><br><span style=color:#8892a0>"+t[2]+"</span>";tt.style.display="block";tt.style.left=(ev.clientX+12)+"px";tt.style.top=(ev.clientY+12)+"px";cv.style.cursor="pointer";}else{tt.style.display="none";cv.style.cursor="default";}}
+window.addEventListener("resize",function(){if(_last)draw(_last);});
+document.addEventListener("mousemove",_ttShow);
 function initTabs(robots,cur){
   var tb=document.getElementById("tabs");tb.innerHTML="";
   robots.forEach(function(r){

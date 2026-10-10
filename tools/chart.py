@@ -54,7 +54,7 @@ def _candles(ticker, limit=180):
 def _trades(ticker, limit=200):
     try:
         c = sqlite3.connect(str(DB))
-        rows = c.execute("SELECT id,robot_id,ts,kind,qty,price FROM trades WHERE ticker=? AND status LIKE '%FILL%' ORDER BY id DESC LIMIT ?", (ticker, limit)).fetchall()
+        rows = c.execute("SELECT id,robot_id,created_at,kind,qty,price FROM trades WHERE ticker=? AND status LIKE '%FILL%' ORDER BY id DESC LIMIT ?", (ticker, limit)).fetchall()
         c.close()
         return list(reversed(rows))
     except Exception:
