@@ -134,3 +134,44 @@ config.json, broker/ (client.py, models.py), strategies/ (sma.py, grid.py), engi
 ### Известные ограничения
 - WebSocket только для real (sandbox не поддерживает)
 - GetTradingStatus в sandbox возвращает 404 — preflight пропускается
+
+---
+
+## 11. Обновление 2026-10-10 (вечер)
+
+### Критичные фиксы
+- SELL clamp: нельзя продать больше позиции (защита от шорта)
+- SELL skip: если позиции нет, SELL не отправляется
+- Order validation: qty>0, limit требует price>0, stop требует price>0
+- Stop order sequence: сначала ставим новый стоп, потом отменяем старый
+- Stop persistence: stop_order_id пишется в БД сразу после изменения
+- Clear stop_order_id в БД сразу после cancel в do_sell
+- Halt при отрицательной позиции
+- SELL partial fill -> force reconcile next tick
+
+### Восстановление
+- Reconcile реально пишет пропавшие сделки в БД (раньше только логировал)
+- Дедупликация по (kind, ts, допуск 3ч)
+- Окно reconcile расширено до 24ч
+- Pending_info сохраняется в БД (migration 4), переживает рестарт
+- Single-instance lock (runner/lock.py)
+
+### Защиты
+- Reject storm guard: 10 отказов / 5 мин -> halt до конца дня
+- ATR-based sizing (opt-in atr_sizing=true, risk_pct=0.04, atr_mult=2.0)
+- Watchdog с реальным рестартом (log stale >5 мин)
+- Клиент не ретраит 4xx (кроме 401)
+- 30079 (exchange closed) -> info, skip tick
+- Market hours skip для real (sandbox работает 24/7)
+- Кэш свечей 30 сек
+
+### Оптимизации (бэктест 254 тикера, D1, 730 дней)
+- use_limit=false для всех роботов
+- VTBR -> SFIN (backtest: SFIN +20.77% vs VTBR +1.28% на 10/50)
+
+### Инфраструктура
+- tools/real_ready.py — pre-flight чеклист перед real
+- README.md обновлён
+
+### Тесты
+- 77 passed (было 46)
