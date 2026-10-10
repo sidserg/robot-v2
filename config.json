@@ -44,8 +44,8 @@
       "id": 2,
       "enabled": true,
       "mode": "sandbox",
-      "figi": "BBG004730RP0",
-      "ticker": "GAZP",
+      "figi": "BBG004731354",
+      "ticker": "ROSN",
       "account_id": "03ec52bc-6f1b-4ab9-b3f7-3a4e96cde02a",
       "strategy": "sma",
       "params": {
