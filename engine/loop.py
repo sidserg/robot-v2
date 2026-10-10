@@ -639,6 +639,23 @@ class RobotLoop:
                 if _risk_size > 0 and _risk_size < size:
                     log.info("[robot-%s] risk sizing: %s -> %s ("+str(int(_risk_pct*100))+"% of cash)", self.rid, int(size), _risk_size)
                     size = float(_risk_size)
+            _use_atr = bool(self.params.get("atr_sizing", False))
+            _atr_p = int(self.params.get("atr_period", 14) or 14)
+            _atr_m = float(self.params.get("atr_mult", 2.0) or 2.0)
+            if _use_atr and _atr_p > 0 and _atr_m > 0 and len(candles) >= _atr_p + 1:
+                try:
+                    from strategies import indicators as _ind
+                    _atr_val = _ind.atr([c.high for c in candles], [c.low for c in candles], [c.close for c in candles], _atr_p)
+                    if _atr_val and _atr_val > 0 and _cash > 0:
+                        _risk_rub = _cash * _risk_pct if _risk_pct > 0 else _cash * 0.01
+                        _atr_stop_rub = _atr_val * _atr_m
+                        if _atr_stop_rub > 0:
+                            _atr_size = int(_risk_rub / _atr_stop_rub)
+                            if _atr_size > 0:
+                                log.info("[robot-%s] ATR sizing: atr=%.2f risk=%.0f -> size=%s (was %s)", self.rid, _atr_val, _risk_rub, _atr_size, int(size))
+                                size = float(_atr_size)
+                except Exception as _ae:
+                    log.warning("[robot-%s] ATR sizing failed: %s", self.rid, str(_ae)[:100])
             _maxpos = float(self.params.get("max_position_rub", 0))
             _budget = min(_cash, _maxpos) if _maxpos > 0 else _cash
             if _budget > 0 and size * cur > _budget:
