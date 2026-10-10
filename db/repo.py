@@ -127,6 +127,27 @@ def list_states():
         finally:
             conn.close()
 
+def add_equity(robot_id, cash, pos_value, total):
+    with _lock:
+        conn = _connect()
+        try:
+            from datetime import datetime, timezone
+            _ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+            conn.execute("INSERT INTO equity_history (robot_id, ts, cash, pos_value, total) VALUES (?,?,?,?,?)", (int(robot_id), _ts, float(cash or 0), float(pos_value or 0), float(total or 0)))
+            conn.execute("DELETE FROM equity_history WHERE robot_id=? AND ts < datetime('now', '-90 days')", (int(robot_id),))
+        finally:
+            conn.close()
+
+def get_equity(robot_id, days=7):
+    with _lock:
+        conn = _connect()
+        try:
+            _q = "SELECT ts, total FROM equity_history WHERE robot_id=? AND ts >= datetime('now', '-"+str(int(days))+" days') ORDER BY ts"
+            cur = conn.execute(_q, (int(robot_id),))
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            conn.close()
+
 def summary():
     with _lock:
         conn = _connect()

@@ -39,6 +39,14 @@ def m4_pending_info(conn):
     except Exception:
         pass
 
+@migration(5)
+def m5_equity_history(conn):
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS equity_history (id INTEGER PRIMARY KEY AUTOINCREMENT, robot_id INTEGER NOT NULL, ts TEXT NOT NULL, cash REAL, pos_value REAL, total REAL)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_eq_rid_ts ON equity_history(robot_id, ts)")
+    except Exception:
+        pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")

@@ -186,6 +186,36 @@ async def _backup_task(stop_ev, log):
         except asyncio.TimeoutError:
             pass
 
+async def _equity_task(stop_ev, log, loops):
+    from broker import portfolio as _pf
+    from db import repo as _rp
+    while not stop_ev.is_set():
+        try:
+            _accs={}
+            for lp in loops:
+                if lp.account_id not in _accs:
+                    _accs[lp.account_id]=[]
+                _accs[lp.account_id].append(lp)
+            for acc, lps in _accs.items():
+                try:
+                    p=await _pf.get_portfolio(lps[0].c, acc)
+                    for lp in lps:
+                        _pos=0.0
+                        for pos in p.positions:
+                            if pos.figi==lp.figi:
+                                _pos=float(pos.value or 0)
+                                break
+                        _rp.add_equity(lp.rid, p.cash_rub, _pos, p.total_value)
+                    log.info("equity recorded acc=%s robots=%s", acc[:8], len(lps))
+                except Exception as _e:
+                    log.warning("equity task: %s", str(_e)[:120])
+        except Exception as e:
+            log.warning("equity err: %s", str(e)[:120])
+        try:
+            await asyncio.wait_for(stop_ev.wait(), timeout=900)
+        except asyncio.TimeoutError:
+            pass
+
 async def _daily_report_task(stop_ev, log):
     from datetime import datetime, timezone, timedelta
     MSK = timezone(timedelta(hours=3))
@@ -281,6 +311,7 @@ async def run_all():
         tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
         tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
         tasks.append(asyncio.create_task(_daily_report_task(stop_ev, log), name="daily_report"))
+        tasks.append(asyncio.create_task(_equity_task(stop_ev, log, loops), name="equity"))
         tasks.append(asyncio.create_task(_schedule_refresh_task(stop_ev, log), name="schedule_refresh"))
         tasks.append(asyncio.create_task(_backup_task(stop_ev, log), name="backup"))
         try:
