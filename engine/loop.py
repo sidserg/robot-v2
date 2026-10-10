@@ -8,7 +8,6 @@ from datetime import datetime, timezone, timedelta
 from broker import portfolio as pf
 from broker import orders as od
 from broker import preflight as _pfl
-from broker import schedule as _sch
 import pathlib
 from db import repo
 from engine.risk import RiskManager
@@ -282,6 +281,11 @@ class RobotLoop:
             return True
         except Exception as e:
             _emsg = str(e)[:200]
+            if "30079" in _emsg or "not available for trading" in _emsg.lower():
+                if _emsg != getattr(self, "_last_buy_err", None):
+                    self._last_buy_err = _emsg
+                    log.info("[robot-%s] exchange closed (30079), skip buy", self.rid)
+                return False
             if _emsg == getattr(self, "_last_buy_err", None):
                 return False
             self._last_buy_err = _emsg
@@ -390,11 +394,7 @@ class RobotLoop:
         self._paused = self._read_paused()
         if self._paused:
             return
-        _ok, _why = _sch.is_trading_now()
-        if not _ok:
-            if self._tick_count % 20 == 1:
-                log.info("[robot-%s] exchange %s, skip tick", self.rid, _why)
-            return
+
         _now_ts = time.time()
         _gap = 0.0
         if self._last_tick_time > 0:

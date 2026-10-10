@@ -224,6 +224,18 @@ async def run_all():
     db_path = _ROOT / cfg.get("db_path", "data/robot.db")
     stop_ev = asyncio.Event()
     async with TInvestClient(token, mode=_mode) as client:
+        try:
+            _accs = await client.call("UsersService/GetAccounts", {})
+            _n = len(_accs.get("accounts", []) or [])
+            log.info("connection OK, accounts=%s", _n)
+        except Exception as _ce:
+            log.error("connection FAILED: %s", str(_ce)[:200])
+            try:
+                from notify import desktop as _nd
+                _nd.notify_error(0, "connection failed: " + str(_ce)[:80])
+            except Exception:
+                pass
+            return
         loops = [RobotLoop(cfg, r, client) for r in robots_cfg]
         tasks = [asyncio.create_task(lp.run(), name="robot-" + str(lp.rid)) for lp in loops]
         tasks.append(asyncio.create_task(_watchdog_task(stop_ev, log, log_path), name="watchdog"))
