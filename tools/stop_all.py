@@ -17,7 +17,7 @@ def find_ours():
             if "python" not in name:
                 continue
             cmd = " ".join(p.info.get("cmdline") or [])
-            if "RobotV2" in cmd and ("multi.py" in cmd or "chart.py" in cmd):
+            if "RobotV2" in cmd and ("multi.py" in cmd or "chart.py" in cmd or "watch_robot.py" in cmd):
                 out.append((p.info["pid"], cmd))
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
