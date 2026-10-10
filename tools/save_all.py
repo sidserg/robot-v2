@@ -9,12 +9,7 @@ def run(cmd):
 def main():
     msg = "auto-save "+time.strftime("%Y-%m-%d %H:%M")
     if len(sys.argv) > 1:
-        _raw = " ".join(sys.argv[1:])
-        try:
-            _raw.encode("ascii")
-            msg = _raw
-        except UnicodeEncodeError:
-            msg = "update (cyrillic arg skipped)"
+        msg = " ".join(sys.argv[1:])
     print("[1/3] git add")
     run(["git","add","-A"])
     print("[2/3] git commit")
