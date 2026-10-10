@@ -111,7 +111,9 @@ def _read_token():
 async def _collect():
     out = {"ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "states": [], "positions": [], "trades": [], "paused": _read_paused()}
     try:
-        out["states"] = repo.list_states()
+        _st = repo.list_states()
+        out["states"] = _st
+        out["stops"] = {int(r.get("robot_id",0)): (r.get("stop_order_id") or "") for r in _st}
     except Exception:
         pass
     try:
