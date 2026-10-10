@@ -79,6 +79,11 @@ class TInvestClient:
                     else:
                         r.raise_for_status()
                 return r.json()
+            except httpx.HTTPStatusError as _he:
+                if 400 <= _he.response.status_code < 500:
+                    raise
+                last_exc = _he
+                _ename = "HTTPStatusError"
             except Exception as e:
                 last_exc = e
                 _ename = type(e).__name__
