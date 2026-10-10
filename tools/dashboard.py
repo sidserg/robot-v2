@@ -187,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
                 _sz=_db.stat().st_size//1024 if _db.exists() else 0
-                health={"status":"ok","robots":data.get("robots",[]),"trades_total":_n,"reconciled":_rec,"errors":_errs,"db_kb":_sz}
+                health={"status":"ok","positions":data.get("positions",[]),"trades_total":_n,"reconciled":_rec,"errors":_errs,"db_kb":_sz}
                 body=json.dumps(health,ensure_ascii=False).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type","application/json; charset=utf-8")
