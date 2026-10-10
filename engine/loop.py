@@ -487,7 +487,8 @@ class RobotLoop:
             except Exception:
                 pass
             return
-        equity = qty * cur
+        _eq_cash = float(getattr(self, "_cash", 0.0) or 0.0)
+        equity = _eq_cash + qty * cur
         ok, reason = self.risk.check(equity if equity > 0 else 1.0)
         try:
             repo.save_state(
