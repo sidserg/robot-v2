@@ -106,6 +106,13 @@ class RobotLoop:
                     except Exception:
                         pass
                 self._pending_order_id = _st.get("pending_order_id") or None
+                _pi=_st.get("pending_info")
+                if _pi:
+                    try:
+                        import json as _jpi2
+                        self._pending_info=_jpi2.loads(_pi)
+                    except Exception:
+                        self._pending_info=None
                 if self._pending_order_id:
                     log.info("[robot-%s] restored pending %s from state", self.rid, self._pending_order_id)
         except Exception:
@@ -244,6 +251,11 @@ class RobotLoop:
                 except Exception:
                     pass
                 self._pending_info = {"robot_id": self.rid, "kind": "BUY", "ticker": self.ticker, "figi": self.figi, "qty": qty, "price": _px or price, "total": qty * (_px or price), "commission": 0.0, "order_id": res.order_id, "mode": self.mode, "strategy": self.strategy.name}
+                try:
+                    import json as _jpi
+                    repo.save_state(self.rid, pending_info=_jpi.dumps(self._pending_info, ensure_ascii=False))
+                except Exception:
+                    pass
                 log.info("[robot-%s] limit %s placed (status=%s), waiting next tick", self.rid, res.order_id, _st)
                 return False
             _exq = float(getattr(res, "executed_qty", 0) or 0)

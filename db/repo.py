@@ -81,7 +81,7 @@ def count_trades(robot_id: int | None = None) -> int:
         finally:
             conn.close()
 
-def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None):
+def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None, pending_info=None):
     with _lock:
         conn = _connect()
         try:
@@ -101,6 +101,7 @@ def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_s
                 if stop_order_id is not None: fields.append("stop_order_id=?"); vals.append(stop_order_id)
                 if last_tick_ts is not None: fields.append("last_tick_ts=?"); vals.append(last_tick_ts)
                 if pending_order_id is not None: fields.append("pending_order_id=?"); vals.append(pending_order_id)
+                if pending_info is not None: fields.append("pending_info=?"); vals.append(pending_info)
                 if fields:
                     vals.append(int(robot_id))
                     conn.execute("UPDATE robot_state SET " + ",".join(fields) + " WHERE robot_id=?", vals)
