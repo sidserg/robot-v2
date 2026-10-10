@@ -36,12 +36,13 @@ def _atr(candles, i, period):
 def run_backtest(strategy, candles, qty_limit=100, stop_loss=0.05,
                  take_profit=0.15, trail_pct=0.0, start_capital=100000.0,
                  atr_sizing=False, atr_period=14, atr_mult=2.0, risk_pct=0.02,
-                 slippage_pct=0.0):
+                 slippage_pct=0.0, use_limit=False, limit_offset=0.002, limit_timeout=3):
     cash = start_capital
     qty = 0.0
     avg = 0.0
     peak_px = 0.0
     armed = False
+    pending = None
     peak_eq = start_capital
     max_dd = 0.0
     sells = []
@@ -51,6 +52,32 @@ def run_backtest(strategy, candles, qty_limit=100, stop_loss=0.05,
     for i in range(len(candles)):
         sub = candles[:i + 1]
         px = candles[i].close
+        _low = candles[i].low
+        if pending is not None:
+            _pk = pending
+            if _low <= _pk["px"] and _pk["kind"]=="BUY":
+                _fp = _pk["px"]
+                _c = _pk["size"]*_fp
+                _fee=_c*COMMISSION
+                if cash >= _c+_fee:
+                    cash-=(_c+_fee); qty=_pk["size"]; avg=_fp; peak_px=_fp; buys+=1
+                pending=None
+            elif _pk["age"]>=limit_timeout:
+                _buy_px=px*(1+slippage_pct) if slippage_pct>0 else px
+                _c=_pk["size"]*_buy_px
+                _fee=_c*COMMISSION
+                if cash >= _c+_fee:
+                    cash-=(_c+_fee); qty=_pk["size"]; avg=_buy_px; peak_px=_buy_px; buys+=1
+                pending=None
+            else:
+                _pk["age"]+=1
+        if pending is not None:
+            eq=cash+qty*px
+            equity_curve.append(round(eq,2))
+            if eq>peak_eq: peak_eq=eq
+            dd=(peak_eq-eq)/peak_eq if peak_eq>0 else 0.0
+            if dd>max_dd: max_dd=dd
+            continue
 
         if qty > 0 and avg > 0:
             sl = avg * (1 - stop_loss)
@@ -86,16 +113,20 @@ def run_backtest(strategy, candles, qty_limit=100, stop_loss=0.05,
                     _sz=int(_budget/(_a*atr_mult))
                     if _sz>0:
                         size=min(size,float(_sz))
-            _buy_px=px*(1+slippage_pct) if slippage_pct>0 else px
-            cost = size * _buy_px
-            fee = cost * COMMISSION
-            if cash >= cost + fee:
-                cash -= (cost + fee)
-                qty = size
-                avg = _buy_px
-                peak_px = _buy_px
-                armed = False
-                buys += 1
+            if use_limit and limit_offset>0:
+                _lp=px*(1-limit_offset)
+                pending={"px":_lp,"size":size,"kind":"BUY","age":0}
+            else:
+                _buy_px=px*(1+slippage_pct) if slippage_pct>0 else px
+                cost = size * _buy_px
+                fee = cost * COMMISSION
+                if cash >= cost + fee:
+                    cash -= (cost + fee)
+                    qty = size
+                    avg = _buy_px
+                    peak_px = _buy_px
+                    armed = False
+                    buys += 1
         elif sig.action == "SELL" and qty > 0:
             _sell_px = px * (1 - slippage_pct) if slippage_pct > 0 else px
             fee = _sell_px * qty * COMMISSION
