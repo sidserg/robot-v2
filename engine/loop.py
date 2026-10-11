@@ -80,6 +80,8 @@ class RobotLoop:
         self._force_reconcile = False
         self._offline_count = 0
         self._risk_alerted = False
+        self._reconcile_miss_count = 0
+        self._api_err_count = 0
         self._last_fill_qty = 0.0
         self._api_stop_price = 0.0
         self.min_price_step = 0.0
@@ -489,11 +491,19 @@ class RobotLoop:
             from datetime import datetime as _dt
             _c_dt = _dt.strptime(_lct.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
             _age = (datetime.now(timezone.utc).replace(tzinfo=None) - _c_dt).total_seconds()
-            _stale_ok = _age > _tf_sec * 2
+            _stale_ok = _age > _tf_sec * 3
         except Exception:
             _stale_ok = False
         if _lct and _lct == self._last_candle_ts and _stale_ok:
             self._stale_candle_count += 1
+            if self._stale_candle_count == 5:
+                log.error("[robot-%s] stale candles HALT: last=%s x%s", self.rid, _lct, self._stale_candle_count)
+                try:
+                    _nt.notify_error(self.rid, "HALT stale candles x" + str(self._stale_candle_count))
+                except Exception:
+                    pass
+                self._stop = True
+                return
             if self._stale_candle_count == 3:
                 log.warning("[robot-%s] stale candles: last=%s x%s", self.rid, _lct, self._stale_candle_count)
                 try:
@@ -535,7 +545,19 @@ class RobotLoop:
         if _do_reconcile:
             try:
                 await _rec.ensure_stop(self, qty, avg)
-                await _rec.reconcile_trades(self, window_min=1440)
+                _missing = await _rec.reconcile_trades(self, window_min=1440)
+                if _missing and _missing > 0:
+                    self._reconcile_miss_count += 1
+                    if self._reconcile_miss_count >= 3:
+                        log.error("[robot-%s] reconcile mismatch x%s, HALT", self.rid, self._reconcile_miss_count)
+                        try:
+                            _nt.notify_error(self.rid, "HALT reconcile mismatch" )
+                        except Exception:
+                            pass
+                        self._stop = True
+                        return
+                else:
+                    self._reconcile_miss_count = 0
             except Exception as _e:
                 log.warning("[robot-%s] reconcile: %s", self.rid, str(_e)[:120])
         if qty > 0 and avg <= 0:
@@ -730,7 +752,17 @@ class RobotLoop:
         while not self._stop:
             try:
                 await self.tick()
+                self._api_err_count = 0
             except Exception as e:
+                self._api_err_count = int(getattr(self, "_api_err_count", 0) or 0) + 1
+                if self._api_err_count >= 5:
+                    log.error("[robot-%s] %s consecutive tick errors, HALT", self.rid, self._api_err_count)
+                    try:
+                        _nt.notify_error(self.rid, "HALT: " + str(self._api_err_count) + " tick errors")
+                    except Exception:
+                        pass
+                    self._stop = True
+                    return
                 if getattr(self.c, "auth_failed", False):
                     log.error("[robot-%s] AUTH FAILED, halting robot", self.rid)
                     try:
