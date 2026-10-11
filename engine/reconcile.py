@@ -50,20 +50,11 @@ async def ensure_stop(loop, size, avg):
             pass
         extras = [x for x in all_figi if x != keep]
     elif all_figi:
-        loop.stop_order_id = all_figi[0]
-        try:
-            loop._api_stop_price = sp
-        except Exception:
-            pass
-        try:
-            from db import repo as _rp
-            _rp.save_state(loop.rid, stop_order_id=all_figi[0])
-        except Exception:
-            pass
-        extras = all_figi[1:]
+        log.warning("[robot-%s] stop price mismatch (need %s), cancel all and replace", loop.rid, sp)
+        extras = list(all_figi)
     else:
         extras = []
-    if all_figi:
+    if all_figi and same_px:
         if extras:
             log.warning("[robot-%s] cancel %s extra stops", loop.rid, len(extras))
         for extra in extras:
@@ -72,6 +63,7 @@ async def ensure_stop(loop, size, avg):
             except Exception:
                 pass
         return
+
     try:
         r = await od.post_stop_order(loop.c, loop.account_id, loop.figi, size, sp)
         loop.stop_fail_count = 0
