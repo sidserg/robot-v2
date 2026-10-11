@@ -314,6 +314,16 @@ class RobotLoop:
     async def do_sell(self, qty, price, reason="signal"):
         try:
             _max_spread = float(self.params.get("max_spread_percent", 0.5))
+            if self.mode == "real" and reason == "signal":
+                try:
+                    from broker.session_guard import session_phase, spread_limit_for_phase
+                    _ph = session_phase()
+                    _max_spread = spread_limit_for_phase(_ph, _max_spread)
+                    if _ph in ("pre-open","after-close","weekend"):
+                        log.info("[robot-%s] session=%s, skip sell", self.rid, _ph)
+                        return False
+                except Exception:
+                    pass
             if _max_spread > 0 and reason == "signal":
                 try:
                     _sp = await pf.get_spread_pct(self.c, self.figi)
@@ -650,6 +660,16 @@ class RobotLoop:
         sig = self.strategy.signal(candles, qty, avg)
         if sig.action == "BUY" and qty <= 0:
             _max_spread = float(self.params.get("max_spread_percent", 0.5))
+            if self.mode == "real":
+                try:
+                    from broker.session_guard import session_phase, spread_limit_for_phase
+                    _ph = session_phase()
+                    _max_spread = spread_limit_for_phase(_ph, _max_spread)
+                    if _ph in ("pre-open","after-close","weekend"):
+                        log.info("[robot-%s] session=%s, skip buy", self.rid, _ph)
+                        return
+                except Exception:
+                    pass
             if _max_spread > 0:
                 try:
                     _sp = await pf.get_spread_pct(self.c, self.figi)
