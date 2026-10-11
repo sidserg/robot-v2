@@ -19,7 +19,7 @@ def main():
         fast=int(p.get("fast",5)); slow=int(p.get("slow",20))
         mode=p.get("signal_mode","cross")
         try: c=load_candles_sync(fg,days=730,timeframe="D1")
-        except: continue
+        except Exception: continue
         if not c or len(c)<30: continue
         st={"fast":fast,"slow":slow,"signal_mode":mode}
         a=run_backtest(SMAStrategy(st),c,qty_limit=100,stop_loss=0.05,take_profit=0.15,slippage_pct=0.001).pnl_pct

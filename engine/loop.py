@@ -866,18 +866,18 @@ class RobotLoop:
                 self._api_err_count = 0
             except Exception as e:
                 self._api_err_count = int(getattr(self, "_api_err_count", 0) or 0) + 1
-                if self._api_err_count >= 5:
-                    log.error("[robot-%s] %s consecutive tick errors, HALT", self.rid, self._api_err_count)
-                    try:
-                        _nt.notify_error(self.rid, "HALT: " + str(self._api_err_count) + " tick errors")
-                    except Exception:
-                        pass
-                    self._stop = True
-                    return
                 if getattr(self.c, "auth_failed", False):
                     log.error("[robot-%s] AUTH FAILED, halting robot", self.rid)
                     try:
                         _nt.notify_error(self.rid, "TOKEN EXPIRED, halt")
+                    except Exception:
+                        pass
+                    self._stop = True
+                    return
+                if self._api_err_count >= 5:
+                    log.error("[robot-%s] %s consecutive tick errors, HALT", self.rid, self._api_err_count)
+                    try:
+                        _nt.notify_error(self.rid, "HALT: " + str(self._api_err_count) + " tick errors")
                     except Exception:
                         pass
                     self._stop = True

@@ -14,7 +14,7 @@ def _num(p,k,lo=None,hi=None):
     v=p.get(k)
     if v is None: return None,k+" missing"
     try: v=float(v)
-    except: return None,k+" not num"
+    except Exception: return None,k+" not num"
     if lo is not None and v<lo: return None,k+" too low"
     if hi is not None and v>hi: return None,k+" too high"
     return v,None
@@ -49,7 +49,7 @@ def validate(cfg):
         if f is not None and s is not None:
             try:
                 if int(f) >= int(s): errs.append(tag + " fast>=slow")
-            except: errs.append(tag + " fast/slow not int")
+            except Exception: errs.append(tag + " fast/slow not int")
         _, e = _num(p, "qty_limit", 1, None)
         if e: errs.append(tag + " qty_limit: " + e)
         _, e = _num(p, "stop_loss", 0.001, 0.5)
