@@ -81,7 +81,7 @@ def count_trades(robot_id: int | None = None) -> int:
         finally:
             conn.close()
 
-def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None, pending_info=None):
+def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None, pending_info=None, velocity_cooldown_until=None, velocity_half_open=None, risk_scale=None):
     with _lock:
         conn = _connect()
         try:
@@ -102,6 +102,9 @@ def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_s
                 if last_tick_ts is not None: fields.append("last_tick_ts=?"); vals.append(last_tick_ts)
                 if pending_order_id is not None: fields.append("pending_order_id=?"); vals.append(pending_order_id)
                 if pending_info is not None: fields.append("pending_info=?"); vals.append(pending_info)
+                if velocity_cooldown_until is not None: fields.append("velocity_cooldown_until=?"); vals.append(float(velocity_cooldown_until or 0))
+                if velocity_half_open is not None: fields.append("velocity_half_open=?"); vals.append(1 if velocity_half_open else 0)
+                if risk_scale is not None: fields.append("risk_scale=?"); vals.append(float(risk_scale or 1.0))
                 if fields:
                     vals.append(int(robot_id))
                     conn.execute("UPDATE robot_state SET " + ",".join(fields) + " WHERE robot_id=?", vals)

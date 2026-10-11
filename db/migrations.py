@@ -47,6 +47,14 @@ def m5_equity_history(conn):
     except Exception:
         pass
 
+@migration(6)
+def m6_velocity_state(conn):
+    for col in ("velocity_cooldown_until","velocity_half_open","risk_scale"):
+        try:
+            conn.execute("ALTER TABLE robot_state ADD COLUMN " + col + " REAL")
+        except Exception:
+            pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")
