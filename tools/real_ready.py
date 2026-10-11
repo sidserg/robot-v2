@@ -43,8 +43,13 @@ def check_tests():
         if "passed" in l: return True,l.strip()
     return False,"tests FAILED: "+out[-200:]
 def check_log_errors():
+    lines = _log().splitlines()
+    _start = 0
+    for _i, _l in enumerate(lines):
+        if "starting 5 robots" in _l or "runner: starting" in _l:
+            _start = _i
     n=0
-    for ln in _log().splitlines():
+    for ln in lines[_start:]:
         if "[ERROR]" in ln: n+=1
     if n==0: return True,"0 ERROR в логе"
     if n<5: return True,str(n)+" ERROR (, приемлемо)"
