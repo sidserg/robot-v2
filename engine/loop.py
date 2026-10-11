@@ -409,6 +409,11 @@ class RobotLoop:
                         _nt.notify_error(self.rid, "slip %.2f%% " % _slip + reason)
                     except Exception:
                         pass
+            try:
+                _pnl_rec = (_expx - avg) * _exq if avg > 0 else 0
+                self.risk.record_trade(_pnl_rec)
+            except Exception:
+                pass
             self.peak_px = 0.0
             self.armed = False
             try:

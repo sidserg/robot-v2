@@ -29,6 +29,12 @@ class RiskManager:
         self.velocity_cooldown_until = 0.0
         self.velocity_half_open = False
         self.risk_scale = 1.0
+        self.max_consec_losses = int(p.get("max_consecutive_losses", 5) or 0)
+        self.max_trades_day = int(p.get("max_trades_per_day", 0) or 0)
+        self._consec_losses = 0
+        self._trades_today = 0
+        self._trades_day_date = None
+        self.trades_stopped = False
 
     def record_reject(self):
         _now = datetime.now(timezone.utc).timestamp()
@@ -38,6 +44,22 @@ class RiskManager:
         if self.reject_threshold > 0 and len(self._rejects) >= self.reject_threshold:
             self.reject_stopped = True
             self.reject_stopped_date = datetime.now(timezone.utc).date()
+
+    def record_trade(self, pnl):
+        today = datetime.now(timezone.utc).date()
+        if self._trades_day_date != today:
+            self._trades_day_date = today
+            self._trades_today = 0
+            self.trades_stopped = False
+        self._trades_today += 1
+        try:
+            _p = float(pnl or 0)
+        except Exception:
+            _p = 0.0
+        if _p < 0:
+            self._consec_losses += 1
+        elif _p > 0:
+            self._consec_losses = 0
 
     def record_success(self):
         if self.velocity_half_open:
@@ -67,6 +89,15 @@ class RiskManager:
                 self._eq_hist.clear()
             else:
                 return False, self.stopped_reason or "stopped"
+        if self._trades_day_date != today:
+            self._trades_day_date = today
+            self._trades_today = 0
+            self.trades_stopped = False
+        if self.max_trades_day > 0 and self._trades_today >= self.max_trades_day:
+            self.trades_stopped = True
+            return False, "max trades/day "+str(self._trades_today)
+        if self.max_consec_losses > 0 and self._consec_losses >= self.max_consec_losses:
+            return False, "consec losses "+str(self._consec_losses)
         if self.day_date != today:
             self.day_date = today
             self.day_equity_start = equity
