@@ -52,7 +52,12 @@ Mode: sandbox. Ready for real: ~80 percent.
 | runner/supervisor.py | auto-restart crashed tasks |
 | db/repo.py | SQLite wrapper |
 | tools/chart.py | web chart on :8771 |
+| tools/status.py | live status of all robots |
 | tools/real_ready.py | pre-flight check for real |
+| tools/validate_config.py | validate config.json |
+| tools/export_csv.py | export trades to CSV |
+| docs/IDEAS.md | hypotheses registry |
+| docs/AI_CONTEXT.md | this file |
 | config.json | robots config |
 ## 6. Safety guards
 
@@ -127,7 +132,7 @@ Intraday (M5, Sep 2026) - REJECTED
 | SMA slope | -27.2 | -19.1 | -32.1 | -9.6 | -3.7 |
 | Bollinger | -9.3 | -4.4 | -9.0 | -0.9 | -0.4 |
 
-Verdict: M5 does not work, commissions eat everything. Test M15.
+Verdict: M5 and M15 both negative, commissions eat everything. Intraday on blue chips does not work. Next: H1 on volatile stocks (RNFT, SMLT, CHMF).
 ## 8. How to run
 
 Start robots:
@@ -166,10 +171,6 @@ Save (git add + commit + push):
 python tools\save_all.py "commit message"
 ```
 
-Update this file after major changes:
-```cmd
-python tools\update_ai_context.py
-```
 
 ## 9. URLs
 
