@@ -17,7 +17,6 @@ from strategies.rsi import RSIStrategy
 from strategies.bollinger import BollingerStrategy
 from strategies.macd import MACDStrategy
 from notify import desktop as _nt
-from engine.watchdog import Watchdog
 from engine import reconcile as _rec
 
 log = logging.getLogger("engine.loop")
