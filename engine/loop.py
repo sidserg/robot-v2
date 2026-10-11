@@ -395,7 +395,7 @@ class RobotLoop:
             if self.stop_order_id:
                 try:
                     await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
-                    log.info("[robot-%s] SQL: stop %s cancelled before SELL", self.rid, self.stop_order_id)
+                    log.info("[robot-%s] SELL: stop %s cancelled", self.rid, self.stop_order_id)
                 except Exception as _ce:
                     log.warning("[robot-%s] SELL: stop cancel failed: %s", self.rid, str(_ce)[:100])
                 self.stop_order_id = None
