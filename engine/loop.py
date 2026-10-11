@@ -75,6 +75,7 @@ class RobotLoop:
         self._pending_ticks = 0
         self._pending_info = None
         self._pending_result = None
+        self._pending_err_count = 0
         self._last_tick_time = 0.0
         self._force_reconcile = False
         self._offline_count = 0
@@ -201,6 +202,7 @@ class RobotLoop:
             return "NONE"
         try:
             r = await od.get_order_state(self.c, self.account_id, self._pending_order_id)
+            self._pending_err_count = 0
             st = (r.get("executionReportStatus") or "").upper()
             log.info("[robot-%s] pending %s = %s", self.rid, self._pending_order_id, st)
             if "FILL" in st:
@@ -241,9 +243,17 @@ class RobotLoop:
                 return "FALLBACK"
             return "WAIT"
         except Exception as e:
-            log.warning("[robot-%s] pending check failed: %s", self.rid, str(e)[:100])
-            self._pending_order_id = None
-            return "DEAD"
+            self._pending_err_count = int(getattr(self, "_pending_err_count", 0) or 0) + 1
+            log.warning("[robot-%s] pending check failed (%s): %s", self.rid, self._pending_err_count, str(e)[:100])
+            if self._pending_err_count >= 5:
+                log.error("[robot-%s] pending %s unreachable x%s, HALT (avoid double-buy)", self.rid, self._pending_order_id, self._pending_err_count)
+                try:
+                    _nt.notify_error(self.rid, "pending check failed x" + str(self._pending_err_count))
+                except Exception:
+                    pass
+                self._stop = True
+                return "DEAD"
+            return "WAIT"
 
     async def do_buy(self, qty, price):
         _p = self._pending_result or "NONE"
