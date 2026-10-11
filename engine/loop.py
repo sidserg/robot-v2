@@ -80,6 +80,9 @@ class RobotLoop:
         self._force_reconcile = False
         self._offline_count = 0
         self._risk_alerted = False
+        self._warmup_ticks = int(params.get("warmup_ticks", 3) or 3)
+        self._warmup_done = 0
+        self._drop_alerted = False
         self._reconcile_miss_count = 0
         self._api_err_count = 0
         self._last_fill_qty = 0.0
@@ -657,6 +660,21 @@ class RobotLoop:
                     _jump_ok = False
         if not _jump_ok:
             return
+        from engine.startup_filter import warmup_ok, market_drop_pct
+        _w_ok, _w_why = warmup_ok(self)
+        if not _w_ok:
+            log.info("[robot-%s] %s, skip signal", self.rid, _w_why)
+            return
+        _drop = market_drop_pct(candles, lookback=5)
+        if _drop >= 8.0 and not self._drop_alerted:
+            self._drop_alerted = True
+            log.warning("[robot-%s] MARKET DROP %.2f%% over 5 candles (watching)", self.rid, _drop)
+            try:
+                _nt.notify_error(self.rid, "market drop " + str(round(_drop,1)) + "% over 5 candles")
+            except Exception:
+                pass
+        elif _drop < 5.0:
+            self._drop_alerted = False
         sig = self.strategy.signal(candles, qty, avg)
         if sig.action == "BUY" and qty <= 0:
             _max_spread = float(self.params.get("max_spread_percent", 0.5))

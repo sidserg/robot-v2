@@ -48,6 +48,7 @@ async def test_tick_buys_on_signal():
     loop.get_candles = AsyncMock(return_value=_candles_up(60))
     loop.get_position = AsyncMock(return_value=(0.0, 0.0, 0.0))
     loop.do_buy = AsyncMock(return_value=True)
+    loop._warmup_done = 10
     with patch("engine.loop.od.post_stop_order", new=AsyncMock(return_value=OrderResult(order_id="s1", status="STOP"))):
         await loop.tick()
     loop.do_buy.assert_awaited_once()
