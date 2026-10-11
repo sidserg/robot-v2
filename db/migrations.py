@@ -71,6 +71,13 @@ def m8_stopped_state(conn):
         except Exception:
             pass
 
+@migration(9)
+def m9_peak_px(conn):
+    try:
+        conn.execute("ALTER TABLE robot_state ADD COLUMN peak_px REAL")
+    except Exception:
+        pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")

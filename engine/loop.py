@@ -104,6 +104,9 @@ class RobotLoop:
                     if _st.get("stopped"):
                         self.risk.stopped = True
                         self.risk.stopped_reason = str(_st.get("stopped_reason") or "restored")
+                    _pp = _st.get("peak_px")
+                    if _pp:
+                        self.peak_px = float(_pp)
                     _vcu = _st.get("velocity_cooldown_until")
                     if _vcu:
                         self.risk.velocity_cooldown_until = float(_vcu)
@@ -630,6 +633,7 @@ class RobotLoop:
                 reject_stopped_date=(self.risk.reject_stopped_date.isoformat() if getattr(self.risk, "reject_stopped_date", None) else ""),
                 consec_losses=int(getattr(self.risk, "_consec_losses", 0) or 0),
                 trades_today=int(getattr(self.risk, "_trades_today", 0) or 0),
+                peak_px=float(getattr(self, "peak_px", 0.0) or 0.0),
             )
         except Exception:
             pass
