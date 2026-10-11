@@ -375,13 +375,6 @@ class RobotLoop:
                         return False
                 except Exception:
                     pass
-            if self.stop_order_id:
-                await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
-                self.stop_order_id = None
-                try:
-                    repo.save_state(self.rid, stop_order_id="")
-                except Exception:
-                    pass
             try:
                 _pq, _, _ = await self.get_position()
                 if _pq <= 0:
@@ -396,6 +389,17 @@ class RobotLoop:
                     return False
             except Exception as _pe:
                 log.warning("[robot-%s] position check before SELL failed: %s", self.rid, str(_pe)[:100])
+            if self.stop_order_id:
+                try:
+                    await od.cancel_stop_order(self.c, self.account_id, self.stop_order_id)
+                    log.info("[robot-%s] SQL: stop %s cancelled before SELL", self.rid, self.stop_order_id)
+                except Exception as _ce:
+                    log.warning("[robot-%s] SELL: stop cancel failed: %s", self.rid, str(_ce)[:100])
+                self.stop_order_id = None
+                try:
+                    repo.save_state(self.rid, stop_order_id="")
+                except Exception:
+                    pass
             _ot = "ORDER_TYPE_MARKET"
             _px = None
             res = await od.post_order(self.c, self.account_id, self.figi, qty, "ORDER_DIRECTION_SELL", order_type=_ot, price=_px)
