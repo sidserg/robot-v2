@@ -220,6 +220,7 @@ class RobotLoop:
                         rec["status"] = st
                         repo.add_trade(rec)
                         _nt.notify_trade(rec)
+                        self._last_fill_qty = float(_info.get("qty") or 0) or 0
                         log.info("[robot-%s] limit FILL %s x %s = %s", self.rid, self.ticker, _info.get("qty"), _info.get("price"))
                     except Exception as _e:
                         log.error("[robot-%s] fill trade save: %s", self.rid, str(_e)[:100])
