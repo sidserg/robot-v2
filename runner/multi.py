@@ -306,9 +306,9 @@ async def run_all():
             return
         loops = [RobotLoop(cfg, r, client) for r in robots_cfg]
         tasks = [asyncio.create_task(lp.run(), name="robot-" + str(lp.rid)) for lp in loops]
-        tasks.append(asyncio.create_task(_watchdog_task(stop_ev, log, log_path), name="watchdog"))
-        tasks.append(asyncio.create_task(_pilot_task(stop_ev, log, db_path, log_path), name="pilot"))
-        tasks.append(asyncio.create_task(_cross_kill_task(stop_ev, log, cfg, token, _mode, loops), name="cross_kill"))
+        tasks.append(asyncio.create_task(_supervisor("watchdog", lambda: _watchdog_task(stop_ev, log, log_path), stop_ev, log), name="watchdog"))
+        tasks.append(asyncio.create_task(_supervisor("pilot", lambda: _pilot_task(stop_ev, log, db_path, log_path), stop_ev, log), name="pilot"))
+        tasks.append(asyncio.create_task(_supervisor("cross_kill", lambda: _cross_kill_task(stop_ev, log, cfg, token, _mode, loops), stop_ev, log), name="cross_kill"))
         tasks.append(asyncio.create_task(_heartbeat_task(stop_ev, log, loops), name="heartbeat"))
         tasks.append(asyncio.create_task(_daily_report_task(stop_ev, log), name="daily_report"))
         tasks.append(asyncio.create_task(_equity_task(stop_ev, log, loops), name="equity"))
