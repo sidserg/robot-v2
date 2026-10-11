@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """orders.py - order operations."""
 from __future__ import annotations
-import uuid
+import uuid, hashlib
 from typing import Any, Optional
 from broker.client import TInvestClient
 from broker.models import Money, OrderResult
@@ -27,7 +27,13 @@ async def post_order(c: TInvestClient, account_id: str, figi: str, qty: float, d
     if order_type == "ORDER_TYPE_LIMIT" and (not price or price <= 0):
         raise ValueError("post_order: limit order requires price > 0")
     if not order_id:
-        order_id = str(uuid.uuid4())
+        try:
+            from datetime import datetime, timezone
+            _min = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
+            _key = figi + "_" + direction + "_" + _min
+            order_id = hashlib.sha1(_key.encode()).hexdigest()[:32]
+        except Exception:
+            order_id = str(uuid.uuid4())
     body = {"instrumentId": figi, "quantity": str(int(qty)), "direction": direction, "accountId": account_id, "orderType": order_type, "orderId": order_id}
     if order_type == "ORDER_TYPE_LIMIT" and price and price > 0:
         body["price"] = _money(price)
