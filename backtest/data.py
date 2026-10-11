@@ -12,7 +12,7 @@ def read_token(path="token.txt"):
     p = pathlib.Path(path)
     return p.read_text(encoding="utf-8-sig").strip()
 
-INTERVALS = {"H1": "CANDLE_INTERVAL_HOUR", "D1": "CANDLE_INTERVAL_DAY", "M1": "CANDLE_INTERVAL_1_MIN", "M5": "CANDLE_INTERVAL_5_MIN"}
+INTERVALS = {"M1": "CANDLE_INTERVAL_1_MIN", "M5": "CANDLE_INTERVAL_5_MIN", "M15": "CANDLE_INTERVAL_15_MIN", "H1": "CANDLE_INTERVAL_HOUR", "D1": "CANDLE_INTERVAL_DAY"}
 
 async def load_candles(figi, days=730, timeframe="D1", mode="sandbox", token=None):
     tok = token or read_token()
