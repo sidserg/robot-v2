@@ -233,11 +233,25 @@ class RobotLoop:
                 return "DEAD"
             self._pending_ticks = int(getattr(self, "_pending_ticks", 0) or 0) + 1
             if self._pending_ticks >= 3:
+                _cancel_ok = False
                 try:
                     await od.cancel_order(self.c, self.account_id, self._pending_order_id)
+                    _cancel_ok = True
                     log.warning("[robot-%s] pending %s timeout (3 ticks), cancel -> fallback market", self.rid, self._pending_order_id)
-                except Exception:
-                    pass
+                except Exception as _ce:
+                    log.warning("[robot-%s] cancel pending failed: %s", self.rid, str(_ce)[:100])
+                if not _cancel_ok:
+                    self._cancel_fail_count = int(getattr(self, "_cancel_fail_count", 0) or 0) + 1
+                    if self._cancel_fail_count >= 5:
+                        log.error("[robot-%s] cancel pending failed x%s, HALT", self.rid, self._cancel_fail_count)
+                        try:
+                            _nt.notify_error(self.rid, "HALT: cancel pending x" + str(self._cancel_fail_count))
+                        except Exception:
+                            pass
+                        self._stop = True
+                        return "DEAD"
+                    return "WAIT"
+                self._cancel_fail_count = 0
                 self._pending_order_id = None
                 self._pending_ticks = 0
                 return "FALLBACK"
