@@ -684,9 +684,18 @@ class RobotLoop:
                 _n = int(_budget / cur)
                 size = float(_n)
                 log.info("[robot-%s] size reduced to %s by budget", self.rid, _n)
+            _scale = float(getattr(self.risk, 'risk_scale', 1.0) or 1.0)
+            if _scale < 1.0 and _scale > 0:
+                _orig = size
+                size = max(1.0, float(int(size * _scale)))
+                log.info("[robot-%s] risk_scale=%.2f, size %s -> %s", self.rid, _scale, int(_orig), int(size))
             if size > 0:
                 done = await self.do_buy(size, cur)
                 if done:
+                    try:
+                        self.risk.record_success()
+                    except Exception:
+                        pass
                     _fill_qty = float(getattr(self, "_last_fill_qty", 0) or 0)
                     if _fill_qty <= 0:
                         _fill_qty = size

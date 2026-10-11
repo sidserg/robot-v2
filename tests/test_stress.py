@@ -96,7 +96,7 @@ def test_risk_resets_velocity_next_day():
     r.check(96000.0)
     assert r.stopped is True
     r.stopped_date = None
-    from datetime import datetime, timezone
+    r.velocity_cooldown_until = 0.0
     r.stopped_reason = "velocity drop"
     ok, _ = r.check(100000.0)
     assert ok is True

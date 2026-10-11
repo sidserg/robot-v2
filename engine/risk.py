@@ -25,6 +25,10 @@ class RiskManager:
         self._rejects = collections.deque(maxlen=64)
         self.reject_stopped = False
         self.reject_stopped_date = None
+        self.velocity_cooldown_sec = int(p.get("velocity_cooldown_sec", 1800) or 1800)
+        self.velocity_cooldown_until = 0.0
+        self.velocity_half_open = False
+        self.risk_scale = 1.0
 
     def record_reject(self):
         _now = datetime.now(timezone.utc).timestamp()
@@ -34,6 +38,12 @@ class RiskManager:
         if self.reject_threshold > 0 and len(self._rejects) >= self.reject_threshold:
             self.reject_stopped = True
             self.reject_stopped_date = datetime.now(timezone.utc).date()
+
+    def record_success(self):
+        if self.velocity_half_open:
+            self.velocity_half_open = False
+            self.risk_scale = 1.0
+            self.velocity_cooldown_until = 0.0
 
     def check(self, equity: float) -> tuple[bool, str]:
         today = datetime.now(timezone.utc).date()
@@ -45,9 +55,15 @@ class RiskManager:
                 return False, "reject storm ("+str(len(self._rejects))+" in "+str(self.reject_window_sec)+"s)"
         if self.stopped:
             _is_vel = "velocity" in (self.stopped_reason or "")
-            if _is_vel and self.stopped_date != today:
+            if _is_vel:
+                import time as _tm
+                if self.velocity_cooldown_until > 0 and _tm.time() < self.velocity_cooldown_until:
+                    _left = int(self.velocity_cooldown_until - _tm.time())
+                    return False, "velocity cooldown "+str(_left)+"s left"
                 self.stopped = False
                 self.stopped_reason = ""
+                self.velocity_half_open = True
+                self.risk_scale = 0.5
                 self._eq_hist.clear()
             else:
                 return False, self.stopped_reason or "stopped"
@@ -71,7 +87,9 @@ class RiskManager:
             if _base > 0:
                 _drop = (_base - equity) / _base
                 if _drop >= self.velocity_pct:
+                    import time as _tm2
                     self.stopped = True
+                    self.velocity_cooldown_until = _tm2.time() + self.velocity_cooldown_sec
                     self.stopped_reason = "velocity drop {:.2%} in {}s".format(_drop, self.velocity_window)
                     self.stopped_date = today
                     return False, self.stopped_reason
