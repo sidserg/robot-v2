@@ -216,7 +216,12 @@ class Handler(BaseHTTPRequestHandler):
                 _lp=ROOT/"logs"/"robot.log"
                 _errs=0
                 try:
-                    for _ln in _lp.read_text(encoding="utf-8",errors="replace").splitlines():
+                    _all=_lp.read_text(encoding="utf-8",errors="replace").splitlines()
+                    _start=0
+                    for _i,_ln in enumerate(_all):
+                        if "starting 5 robots" in _ln or "runner: starting" in _ln:
+                            _start=_i
+                    for _ln in _all[_start:]:
                         if "[ERROR]" in _ln: _errs+=1
                 except Exception:
                     pass
