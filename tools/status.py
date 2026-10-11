@@ -31,8 +31,12 @@ def _log_errors():
         return 0, 0
     try:
         lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
-        total = len(lines)
-        errs = sum(1 for l in lines if "[ERROR]" in l)
+        _start = 0
+        for _i, _l in enumerate(lines):
+            if "starting 5 robots" in _l or "runner: starting" in _l:
+                _start = _i
+        total = len(lines) - _start
+        errs = sum(1 for l in lines[_start:] if "[ERROR]" in l)
         return total, errs
     except Exception:
         return 0, 0
