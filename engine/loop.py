@@ -108,6 +108,20 @@ class RobotLoop:
                     if _vho:
                         self.risk.velocity_half_open = bool(_vho)
                         self.risk.risk_scale = 0.5
+                    _rsd = _st.get("reject_stopped_date")
+                    if _rsd:
+                        from datetime import datetime as _dt3
+                        try:
+                            self.risk.reject_stopped_date = _dt3.fromisoformat(str(_rsd)).date()
+                            self.risk.reject_stopped = True
+                        except Exception:
+                            pass
+                    _cl = _st.get("consec_losses")
+                    if _cl: self.risk._consec_losses = int(_cl)
+                    _tt = _st.get("trades_today")
+                    if _tt:
+                        self.risk._trades_today = int(_tt)
+                        self.risk._trades_day_date = datetime.now(timezone.utc).date()
                 except Exception:
                     pass
                 _ltt = _st.get("last_tick_ts")
@@ -604,6 +618,9 @@ class RobotLoop:
                 velocity_cooldown_until=float(getattr(self.risk, "velocity_cooldown_until", 0.0) or 0.0),
                 velocity_half_open=int(getattr(self.risk, "velocity_half_open", False) or 0),
                 risk_scale=float(getattr(self.risk, "risk_scale", 1.0) or 1.0),
+                reject_stopped_date=(self.risk.reject_stopped_date.isoformat() if getattr(self.risk, "reject_stopped_date", None) else ""),
+                consec_losses=int(getattr(self.risk, "_consec_losses", 0) or 0),
+                trades_today=int(getattr(self.risk, "_trades_today", 0) or 0),
             )
         except Exception:
             pass
