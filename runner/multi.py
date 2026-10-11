@@ -11,6 +11,7 @@ import pathlib
 import sys
 import time
 from config import loader
+from runner.supervisor import supervisor as _supervisor
 from broker.client import TInvestClient
 from engine.loop import RobotLoop
 
