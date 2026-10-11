@@ -19,7 +19,7 @@ def load_m1(ticker, from_date, till_date):
         if len(_part) < 500:
             break
         start += 500
-        time.sleep(0.3)
+        pass  # no sleep, MOEX allows rapid requests
     out = []
     for x in rows:
         try:
