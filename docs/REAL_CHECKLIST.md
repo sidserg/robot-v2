@@ -16,8 +16,8 @@ Step-by-step for going live. Do not skip.
 - [ ] Make backups: config.json, data/robot.db
 - [ ] Run: python tools/switch_to_real.py
 - [ ] Verify config.json now = config.real.json
+- [ ] python tools/real_ready.py  ->  all OK (armed=false, this is fine)
 - [ ] Set armed=true in config.json
-- [ ] python tools/real_ready.py  ->  all OK
 - [ ] Start: python runner/multi.py
 - [ ] Watch log 5 min: warmup 1/5 ... 5/5, then SCANNING
 - [ ] Check status: python tools/status.py
