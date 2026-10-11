@@ -816,7 +816,11 @@ class RobotLoop:
                             except Exception:
                                 pass
                         except Exception as e:
-                            log.warning("[robot-%s] stop fail: %s", self.rid, str(e)[:100])
+                            log.error("[robot-%s] stop FAILED after BUY: %s", self.rid, str(e)[:120])
+                            try:
+                                _nt.notify_error(self.rid, "STOP FAILED after BUY: " + str(e)[:80])
+                            except Exception:
+                                pass
                     self.peak_px = cur
                     self.armed = False
         elif sig.action == "SELL" and qty > 0:
