@@ -88,7 +88,7 @@ def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_s
             cur = conn.execute("SELECT robot_id FROM robot_state WHERE robot_id=?", (int(robot_id),))
             row = cur.fetchone()
             if row is None:
-                conn.execute("INSERT INTO robot_state (robot_id, running, last_ts, day_date, day_equity_start, day_stopped, peak_value, stop_order_id, last_tick_ts) VALUES (?,?,?,?,?,?,?,?,?)", (int(robot_id), int(running or 0), last_ts, day_date, float(day_equity_start or 0), int(day_stopped or 0), float(peak_value or 0), stop_order_id, last_tick_ts))
+                conn.execute("INSERT INTO robot_state (robot_id, running, last_ts, day_date, day_equity_start, day_stopped, peak_value, stop_order_id, last_tick_ts, velocity_cooldown_until, velocity_half_open, risk_scale) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (int(robot_id), int(running or 0), last_ts, day_date, float(day_equity_start or 0), int(day_stopped or 0), float(peak_value or 0), stop_order_id, last_tick_ts, float(velocity_cooldown_until or 0), int(velocity_half_open or 0), float(risk_scale or 1.0)))
             else:
                 fields = []
                 vals = []
