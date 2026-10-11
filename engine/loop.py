@@ -266,6 +266,9 @@ class RobotLoop:
         if _p == "FILL":
             log.info("[robot-%s] pending FILLed, will place stop next tick", self.rid)
             return True
+        if _p == "DEAD":
+            log.warning("[robot-%s] pending DEAD (halt or already closed), skip buy", self.rid)
+            return False
         _force_market = (_p == "FALLBACK")
         if _force_market:
             log.warning("[robot-%s] limit timeout, force market BUY", self.rid)
