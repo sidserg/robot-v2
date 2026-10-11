@@ -81,14 +81,14 @@ def count_trades(robot_id: int | None = None) -> int:
         finally:
             conn.close()
 
-def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None, pending_info=None, velocity_cooldown_until=None, velocity_half_open=None, risk_scale=None, reject_stopped_date=None, consec_losses=None, trades_today=None):
+def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_start=None, day_stopped=None, peak_value=None, stop_order_id=None, last_tick_ts=None, pending_order_id=None, pending_info=None, velocity_cooldown_until=None, velocity_half_open=None, risk_scale=None, reject_stopped_date=None, consec_losses=None, trades_today=None, stopped=None, stopped_reason=None):
     with _lock:
         conn = _connect()
         try:
             cur = conn.execute("SELECT robot_id FROM robot_state WHERE robot_id=?", (int(robot_id),))
             row = cur.fetchone()
             if row is None:
-                conn.execute("INSERT INTO robot_state (robot_id, running, last_ts, day_date, day_equity_start, day_stopped, peak_value, stop_order_id, last_tick_ts, velocity_cooldown_until, velocity_half_open, risk_scale, reject_stopped_date, consec_losses, trades_today) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (int(robot_id), int(running or 0), last_ts, day_date, float(day_equity_start or 0), int(day_stopped or 0), float(peak_value or 0), stop_order_id, last_tick_ts, float(velocity_cooldown_until or 0), int(velocity_half_open or 0), float(risk_scale or 1.0), str(reject_stopped_date or ""), int(consec_losses or 0), int(trades_today or 0)))
+                conn.execute("INSERT INTO robot_state (robot_id, running, last_ts, day_date, day_equity_start, day_stopped, peak_value, stop_order_id, last_tick_ts, velocity_cooldown_until, velocity_half_open, risk_scale, reject_stopped_date, consec_losses, trades_today, stopped, stopped_reason) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (int(robot_id), int(running or 0), last_ts, day_date, float(day_equity_start or 0), int(day_stopped or 0), float(peak_value or 0), stop_order_id, last_tick_ts, float(velocity_cooldown_until or 0), int(velocity_half_open or 0), float(risk_scale or 1.0), str(reject_stopped_date or ""), int(consec_losses or 0), int(trades_today or 0), int(stopped or 0), str(stopped_reason or "")))
             else:
                 fields = []
                 vals = []
@@ -108,6 +108,8 @@ def save_state(robot_id, running=None, last_ts=None, day_date=None, day_equity_s
                 if reject_stopped_date is not None: fields.append("reject_stopped_date=?"); vals.append(str(reject_stopped_date or ""))
                 if consec_losses is not None: fields.append("consec_losses=?"); vals.append(int(consec_losses or 0))
                 if trades_today is not None: fields.append("trades_today=?"); vals.append(int(trades_today or 0))
+                if stopped is not None: fields.append("stopped=?"); vals.append(int(stopped or 0))
+                if stopped_reason is not None: fields.append("stopped_reason=?"); vals.append(str(stopped_reason or ""))
                 if fields:
                     vals.append(int(robot_id))
                     conn.execute("UPDATE robot_state SET " + ",".join(fields) + " WHERE robot_id=?", vals)

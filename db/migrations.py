@@ -63,6 +63,14 @@ def m7_guard_counters(conn):
         except Exception:
             pass
 
+@migration(8)
+def m8_stopped_state(conn):
+    for col in ("stopped","stopped_reason"):
+        try:
+            conn.execute("ALTER TABLE robot_state ADD COLUMN " + col + " TEXT")
+        except Exception:
+            pass
+
 def current_version(conn):
     try:
         cur = conn.execute("SELECT MAX(version) AS v FROM schema_version")

@@ -101,9 +101,16 @@ class RobotLoop:
                         from datetime import datetime as _dt2
                         self.risk.day_date = _dt2.fromisoformat(_dd).date()
                     self.risk.day_stopped = bool(_st.get("day_stopped") or 0)
+                    if _st.get("stopped"):
+                        self.risk.stopped = True
+                        self.risk.stopped_reason = str(_st.get("stopped_reason") or "restored")
                     _vcu = _st.get("velocity_cooldown_until")
                     if _vcu:
                         self.risk.velocity_cooldown_until = float(_vcu)
+                        import time as _tmx
+                        if float(_vcu) > _tmx.time():
+                            self.risk.stopped = True
+                            self.risk.stopped_reason = "velocity drop (restored)"
                     _vho = _st.get("velocity_half_open")
                     if _vho:
                         self.risk.velocity_half_open = bool(_vho)
@@ -615,6 +622,8 @@ class RobotLoop:
                 day_equity_start=float(self.risk.day_equity_start),
                 day_date=(self.risk.day_date.isoformat() if self.risk.day_date else None),
                 day_stopped=int(self.risk.day_stopped),
+                stopped=int(getattr(self.risk, "stopped", False) or 0),
+                stopped_reason=str(getattr(self.risk, "stopped_reason", "") or ""),
                 velocity_cooldown_until=float(getattr(self.risk, "velocity_cooldown_until", 0.0) or 0.0),
                 velocity_half_open=int(getattr(self.risk, "velocity_half_open", False) or 0),
                 risk_scale=float(getattr(self.risk, "risk_scale", 1.0) or 1.0),
