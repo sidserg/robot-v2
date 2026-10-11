@@ -779,6 +779,26 @@ class RobotLoop:
                 return
         try:
             _q, _a, _c = await self.get_position()
+            _bq = 0.0
+            try:
+                _trades = repo.get_trades(limit=200, robot_id=self.rid)
+                for _t in _trades:
+                    _kind = (_t.get("kind") or "").upper()
+                    _qty = float(_t.get("qty") or 0)
+                    if "kind" in _t and _t.get("ticker") == self.ticker:
+                        if _kind == "BUY": _bq += _qty
+                        elif _kind == "SELL": _bq -= _qty
+            except Exception:
+                pass
+            if abs(_bq - _q) > max(1.0, abs(_q) * 0.01):
+                log.warning("[robot-%s] POSITION DRIFT: broker=%s db=%s, force reconcile", self.rid, _q, _bq)
+                try:
+                    _nt.notify_error(self.rid, "POSITION DRIFT: broker=" + str(_q) + " db=" + str(_bq))
+                except Exception:
+                    pass
+                self._force_reconcile = True
+            else:
+                log.info("[robot-%s] startup position ok: broker=%s db=%s", self.rid, _q, _bq)
             if _q > 0 and _a > 0:
                 await _rec.ensure_stop(self, _q, _a)
         except Exception as _e:
